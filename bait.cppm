@@ -1,9 +1,19 @@
 #pragma leco tool
+#pragma leco add_shader "bait.vert"
+#pragma leco add_shader "bait.frag"
+
 export module bait;
 import vee;
 
 static constexpr const auto width = 1024;
 static constexpr const auto height = 768;
+
+struct point {
+  float x;
+  float y;
+  float z;
+  float w;
+};
 
 extern "C" int main() {
   vee::instance i = vee::create_instance("bait");
@@ -13,6 +23,24 @@ extern "C" int main() {
   vee::queue q = vee::get_queue_for_family(qf);
 
   vee::render_pass rp = vee::create_render_pass(pd, nullptr);
+
+  vee::shader_module vert =
+      vee::create_shader_module_from_resource("bait.vert.spv");
+  vee::shader_module frag =
+      vee::create_shader_module_from_resource("bait.frag.spv");
+  vee::pipeline_layout pl = vee::create_pipeline_layout();
+  vee::gr_pipeline gp =
+      vee::create_graphics_pipeline(*pl, *rp,
+                                    {
+                                        vee::pipeline_vert_stage(*vert, "main"),
+                                        vee::pipeline_frag_stage(*frag, "main"),
+                                    },
+                                    {
+                                        vee::vertex_input_bind(sizeof(point)),
+                                    },
+                                    {
+                                        vee::vertex_attribute_vec2(0, 0),
+                                    });
 
   vee::image t_img = vee::create_srgba_image({width, height});
   vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
@@ -32,4 +60,7 @@ extern "C" int main() {
       .extent = {width, height},
   };
   vee::framebuffer fb = vee::create_framebuffer(fbp);
+
+  vee::command_pool cp = vee::create_command_pool(qf);
+  vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 }
