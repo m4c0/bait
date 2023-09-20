@@ -1,3 +1,6 @@
+module;
+#define offsetof(t, d) __builtin_offsetof(t, d)
+
 export module bait;
 import silog;
 import stubby;
@@ -25,10 +28,17 @@ struct colour {
   float b;
   float a;
 };
+struct inst {
+  colour from;
+  colour to;
+};
 struct all {
   quad q{};
-  colour i[1]{
-      {1.0, 1.0, 1.0, 1.0},
+  inst i[1]{
+      inst{
+          .from = {1.0, 1.0, 1.0, 1.0},
+          .to = {0, 0, 0, 1},
+      },
   };
 };
 
@@ -36,14 +46,14 @@ class bound_quad {
   vee::physical_device m_pd;
 
   vee::buffer m_quad = vee::create_vertex_buffer(sizeof(all::q));
-  vee::buffer m_colour = vee::create_vertex_buffer(sizeof(all::i));
+  vee::buffer m_inst = vee::create_vertex_buffer(sizeof(all::i));
 
   vee::device_memory m_mem = vee::create_host_buffer_memory(m_pd, sizeof(all));
 
 public:
   bound_quad(vee::physical_device pd) : m_pd{pd} {
     vee::bind_buffer_memory(*m_quad, *m_mem, 0);
-    vee::bind_buffer_memory(*m_colour, *m_mem, sizeof(quad));
+    vee::bind_buffer_memory(*m_inst, *m_mem, sizeof(quad));
 
     vee::mapmem mem{*m_mem};
     *static_cast<all *>(*mem) = {};
@@ -51,8 +61,8 @@ public:
 
   void run(vee::command_buffer cb) {
     vee::cmd_bind_vertex_buffers(cb, 0, *m_quad);
-    vee::cmd_bind_vertex_buffers(cb, 1, *m_colour);
-    vee::cmd_draw(cb, 6, 1);
+    vee::cmd_bind_vertex_buffers(cb, 1, *m_inst);
+    vee::cmd_draw(cb, 6, sizeof(all::i) / sizeof(inst));
   }
 };
 
@@ -72,11 +82,12 @@ class pipeline {
       },
       {
           vee::vertex_input_bind(sizeof(point)),
-          vee::vertex_input_bind_per_instance(sizeof(colour)),
+          vee::vertex_input_bind_per_instance(sizeof(inst)),
       },
       {
           vee::vertex_attribute_vec2(0, 0),
           vee::vertex_attribute_vec4(1, 0),
+          vee::vertex_attribute_vec4(1, offsetof(inst, to)),
       });
 
 public:
