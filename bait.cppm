@@ -4,6 +4,7 @@
 
 export module bait;
 import silog;
+import stubby;
 import vee;
 
 static constexpr const auto width = 1024;
@@ -104,6 +105,7 @@ extern "C" int main() {
   vee::device_wait_idle();
 
   vee::mapmem mem{*o_mem};
-  auto *data = static_cast<unsigned *>(*mem);
-  silog::log(silog::debug, "ok? %08x %08x", data[0], data[1]);
+  auto *data = static_cast<stbi::pixel *>(*mem);
+  stbi::write_rgba_unsafe("out/test.png", width, height, data);
+  silog::log(silog::info, "output written to out/test.png");
 }
