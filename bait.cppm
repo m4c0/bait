@@ -10,39 +10,49 @@ static constexpr const auto filename = "out/test.jpg";
 struct point {
   float x;
   float y;
+};
+struct quad {
+  point p[6]{
+      {0.0, 0.0}, {1.0, 1.0}, {1.0, 0.0},
+
+      {1.0, 1.0}, {0.0, 0.0}, {0.0, 1.0},
+  };
+};
+
+struct colour {
   float r;
   float g;
   float b;
   float a;
 };
-struct quad {
-  point ps[6];
+struct all {
+  quad q{};
+  colour i[1]{
+      {1.0, 1.0, 1.0, 1.0},
+  };
 };
 
 class bound_quad {
   vee::physical_device m_pd;
 
-  vee::buffer m_buf = vee::create_vertex_buffer(sizeof(quad));
-  vee::device_memory m_mem = vee::create_host_buffer_memory(m_pd, *m_buf);
-  decltype(nullptr) m_bind = vee::bind_buffer_memory(*m_buf, *m_mem);
+  vee::buffer m_quad = vee::create_vertex_buffer(sizeof(all::q));
+  vee::buffer m_colour = vee::create_vertex_buffer(sizeof(all::i));
+
+  vee::device_memory m_mem = vee::create_host_buffer_memory(m_pd, sizeof(all));
 
 public:
   bound_quad(vee::physical_device pd) : m_pd{pd} {
-    vee::mapmem mem{*m_mem};
-    *static_cast<quad *>(*mem) = quad{{
-        {-1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
-        {1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
-        {1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
+    vee::bind_buffer_memory(*m_quad, *m_mem, 0);
+    vee::bind_buffer_memory(*m_colour, *m_mem, sizeof(quad));
 
-        {1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
-        {-1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
-        {-1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
-    }};
+    vee::mapmem mem{*m_mem};
+    *static_cast<all *>(*mem) = {};
   }
 
   void run(vee::command_buffer cb) {
-    vee::cmd_bind_vertex_buffers(cb, 0, *m_buf);
-    vee::cmd_draw(cb, 6);
+    vee::cmd_bind_vertex_buffers(cb, 0, *m_quad);
+    vee::cmd_bind_vertex_buffers(cb, 1, *m_colour);
+    vee::cmd_draw(cb, 6, 1);
   }
 };
 
@@ -62,10 +72,11 @@ class pipeline {
       },
       {
           vee::vertex_input_bind(sizeof(point)),
+          vee::vertex_input_bind_per_instance(sizeof(colour)),
       },
       {
           vee::vertex_attribute_vec2(0, 0),
-          vee::vertex_attribute_vec4(0, 2 * sizeof(float)),
+          vee::vertex_attribute_vec4(1, 0),
       });
 
 public:
