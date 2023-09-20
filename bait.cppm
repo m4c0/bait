@@ -79,6 +79,9 @@ public:
   }
 };
 
+struct upc {
+  float aspect;
+};
 class pipeline {
   const vee::render_pass &m_rp;
 
@@ -86,7 +89,8 @@ class pipeline {
       vee::create_shader_module_from_resource("bait.vert.spv");
   vee::shader_module m_frag =
       vee::create_shader_module_from_resource("bait.frag.spv");
-  vee::pipeline_layout m_pl = vee::create_pipeline_layout();
+  vee::pipeline_layout m_pl =
+      vee::create_pipeline_layout({vee::vert_frag_push_constant_range<upc>()});
   vee::gr_pipeline m_gp = vee::create_graphics_pipeline(
       *m_pl, *m_rp,
       {
@@ -104,10 +108,17 @@ class pipeline {
           vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
 
+  upc m_pc;
+
 public:
   pipeline(const vee::render_pass &rp) : m_rp{rp} {}
 
-  [[nodiscard]] constexpr auto ppl() const noexcept { return *m_gp; }
+  void run(vee::command_buffer cb) {
+    m_pc.aspect = static_cast<float>(width) / static_cast<float>(height);
+
+    vee::cmd_bind_gr_pipeline(cb, *m_gp);
+    vee::cmd_push_vert_frag_constants(cb, *m_pl, &m_pc);
+  }
 };
 
 class program {
@@ -119,7 +130,7 @@ public:
       : m_t{pd}, m_p{rp} {}
 
   void run(vee::command_buffer cb) {
-    vee::cmd_bind_gr_pipeline(cb, m_p.ppl());
+    m_p.run(cb);
     m_t.run(cb);
   }
 };
