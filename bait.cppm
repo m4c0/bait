@@ -2,11 +2,34 @@
 export module bait;
 import vee;
 
+static constexpr const auto width = 1024;
+static constexpr const auto height = 768;
+
 extern "C" int main() {
   vee::instance i = vee::create_instance("bait");
-  vee::physical_device_pair pdqf =
-      vee::find_physical_device_with_universal_queue(nullptr);
-  vee::device d =
-      vee::create_single_queue_device(pdqf.physical_device, pdqf.queue_family);
-  vee::queue q = vee::get_queue_for_family(pdqf.queue_family);
+  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
+
+  vee::device d = vee::create_single_queue_device(pd, qf);
+  vee::queue q = vee::get_queue_for_family(qf);
+
+  vee::render_pass rp = vee::create_render_pass(pd, nullptr);
+
+  vee::image t_img = vee::create_srgba_image({width, height});
+  vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
+  vee::bind_image_memory(*t_img, *t_mem);
+  vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
+
+  vee::image d_img = vee::create_depth_image({width, height});
+  vee::device_memory d_mem = vee::create_local_image_memory(pd, *d_img);
+  vee::bind_image_memory(*d_img, *d_mem);
+  vee::image_view d_iv = vee::create_depth_image_view(*d_img);
+
+  vee::fb_params fbp{
+      .physical_device = pd,
+      .render_pass = *rp,
+      .image_buffer = *t_iv,
+      .depth_buffer = *d_iv,
+      .extent = {width, height},
+  };
+  vee::framebuffer fb = vee::create_framebuffer(fbp);
 }
