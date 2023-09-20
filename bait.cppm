@@ -26,7 +26,7 @@ struct colour {
   float r;
   float g;
   float b;
-  float a;
+  float a = 1.0f;
 };
 struct area {
   float x;
@@ -39,17 +39,18 @@ struct inst {
   colour to;
   area rect;
 };
+static constexpr long double operator""_u(long double a) { return a / 256.0f; };
 struct all {
   quad q{};
   inst i[2]{
       inst{
-          .from = {1.0, 1.0, 1.0, 1.0},
-          .to = {0, 0, 0, 1},
+          .from = {160._u, 200._u, 0._u},
+          .to = {160._u, 140._u, 0._u},
           .rect = {-1.0, -1.0, 1.0, 2.0},
       },
       inst{
-          .from = {0.0, 1.0, 1.0, 1.0},
-          .to = {1, 0, 0, 1},
+          .from = {65._u, 150._u, 225._u},
+          .to = {100._u, 250._u, 243._u},
           .rect = {0.0, -1.0, 1.0, 2.0},
       },
   };
