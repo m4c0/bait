@@ -47,7 +47,7 @@ extern "C" int main() {
   vee::device_memory v_mem = vee::create_host_buffer_memory(pd, *v_buf);
   vee::bind_buffer_memory(*v_buf, *v_mem);
 
-  vee::image t_img = vee::create_readable_srgba_image({width, height});
+  vee::image t_img = vee::create_renderable_image({width, height});
   vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
   vee::bind_image_memory(*t_img, *t_mem);
   vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
@@ -57,7 +57,8 @@ extern "C" int main() {
   vee::bind_image_memory(*d_img, *d_mem);
   vee::image_view d_iv = vee::create_depth_image_view(*d_img);
 
-  vee::buffer o_buf = vee::create_transfer_dst_buffer(width * height * 4);
+  vee::buffer o_buf =
+      vee::create_transfer_dst_buffer(width * height * 4 * sizeof(float));
   vee::device_memory o_mem = vee::create_host_buffer_memory(pd, *o_buf);
   vee::bind_buffer_memory(*o_buf, *o_mem);
 
@@ -88,19 +89,17 @@ extern "C" int main() {
       // vee::cmd_draw(cb, 3);
       vee::cmd_end_render_pass(cb);
     }
+    vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
+    vee::cmd_copy_image_to_buffer(cb, {width, height}, *t_img, *o_buf);
     vee::end_cmd_buf(cb);
   }
 
   vee::fence f = vee::create_fence_signaled();
-  try {
-    vee::queue_submit({
-        .queue = q,
-        .fence = *f,
-        .command_buffer = cb,
-    });
-  } catch (...) {
-    silog::log(silog::debug, "oops");
-  }
+  vee::queue_submit({
+      .queue = q,
+      .fence = *f,
+      .command_buffer = cb,
+  });
 
   vee::device_wait_idle();
   silog::log(silog::debug, "ok");
