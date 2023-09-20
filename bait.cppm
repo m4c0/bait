@@ -1,7 +1,3 @@
-#pragma leco tool
-#pragma leco add_shader "bait.vert"
-#pragma leco add_shader "bait.frag"
-
 export module bait;
 import silog;
 import stubby;
@@ -148,3 +144,7 @@ extern "C" int main() {
   stbi::write_rgba_unsafe(filename, width, height, data);
   silog::log(silog::info, "output written to [%s]", filename);
 }
+
+#pragma leco add_shader "bait.vert"
+#pragma leco add_shader "bait.frag"
+#pragma leco tool
