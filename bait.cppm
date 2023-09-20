@@ -7,7 +7,7 @@ import silog;
 import stubby;
 import vee;
 
-static constexpr const auto width = 1024;
+static constexpr const auto width = 1280;
 static constexpr const auto height = 768;
 
 struct point {
