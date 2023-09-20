@@ -42,7 +42,11 @@ extern "C" int main() {
                                         vee::vertex_attribute_vec2(0, 0),
                                     });
 
-  vee::image t_img = vee::create_srgba_image({width, height});
+  vee::buffer v_buf = vee::create_vertex_buffer(sizeof(point) * 3);
+  vee::device_memory v_mem = vee::create_host_buffer_memory(pd, *v_buf);
+  vee::bind_buffer_memory(*v_buf, *v_mem);
+
+  vee::image t_img = vee::create_readable_srgba_image({width, height});
   vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
   vee::bind_image_memory(*t_img, *t_mem);
   vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
@@ -51,6 +55,10 @@ extern "C" int main() {
   vee::device_memory d_mem = vee::create_local_image_memory(pd, *d_img);
   vee::bind_image_memory(*d_img, *d_mem);
   vee::image_view d_iv = vee::create_depth_image_view(*d_img);
+
+  vee::buffer o_buf = vee::create_transfer_dst_buffer(width * height * 4);
+  vee::device_memory o_mem = vee::create_host_buffer_memory(pd, *o_buf);
+  vee::bind_buffer_memory(*o_buf, *o_mem);
 
   vee::fb_params fbp{
       .physical_device = pd,
