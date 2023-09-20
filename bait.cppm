@@ -75,22 +75,22 @@ extern "C" int main() {
 
   {
     vee::begin_cmd_buf_one_time_submit(cb);
-    vee::cmd_bind_gr_pipeline(cb, *gp);
-    vee::cmd_bind_vertex_buffers(cb, 0, *v_buf);
-    vee::cmd_draw(cb, 3);
+    // vee::cmd_bind_gr_pipeline(cb, *gp);
+    // vee::cmd_bind_vertex_buffers(cb, 0, *v_buf);
+    // vee::cmd_draw(cb, 3);
     vee::end_cmd_buf(cb);
   }
 
-  vee::semaphore img_available_sema = vee::create_semaphore();
-  vee::semaphore rnd_finished_sema = vee::create_semaphore();
   vee::fence f = vee::create_fence_signaled();
-  vee::queue_submit({
-      .queue = q,
-      .fence = *f,
-      .command_buffer = cb,
-      .wait_semaphore = *img_available_sema,
-      .signal_semaphore = *rnd_finished_sema,
-  });
+  try {
+    vee::queue_submit({
+        .queue = q,
+        .fence = *f,
+        .command_buffer = cb,
+    });
+  } catch (...) {
+    silog::log(silog::debug, "oops");
+  }
 
   vee::device_wait_idle();
   silog::log(silog::debug, "ok");
