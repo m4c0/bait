@@ -76,6 +76,14 @@ extern "C" int main() {
   vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 
   {
+    vee::mapmem mem{*v_mem};
+    auto *pix = static_cast<point *>(*mem);
+    pix[0] = {-1.0, -1.0, 0.0, 0.0};
+    pix[1] = {1.0, 1.0, 0.0, 0.0};
+    pix[2] = {1.0, -1.0, 0.0, 0.0};
+  }
+
+  {
     vee::begin_cmd_buf_one_time_submit(cb);
     {
       vee::cmd_begin_render_pass({
@@ -85,9 +93,9 @@ extern "C" int main() {
           .extent = {width, height},
           .clear_color = {{0.1, 0.2, 0.3, 1.0}},
       });
-      // vee::cmd_bind_gr_pipeline(cb, *gp);
-      // vee::cmd_bind_vertex_buffers(cb, 0, *v_buf);
-      // vee::cmd_draw(cb, 3);
+      vee::cmd_bind_gr_pipeline(cb, *gp);
+      vee::cmd_bind_vertex_buffers(cb, 0, *v_buf);
+      vee::cmd_draw(cb, 3);
       vee::cmd_end_render_pass(cb);
     }
     vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
