@@ -13,24 +13,41 @@ struct point {
   float z;
   float w;
 };
+struct tri {
+  point ps[3];
+};
+struct quad {
+  tri t[2];
+};
 
-class triangle {
+class bound_quad {
   vee::physical_device m_pd;
 
-  vee::buffer m_buf = vee::create_vertex_buffer(sizeof(point) * 3);
+  vee::buffer m_buf = vee::create_vertex_buffer(sizeof(quad));
   vee::device_memory m_mem = vee::create_host_buffer_memory(m_pd, *m_buf);
   decltype(nullptr) m_bind = vee::bind_buffer_memory(*m_buf, *m_mem);
 
 public:
-  triangle(vee::physical_device pd) : m_pd{pd} {
+  bound_quad(vee::physical_device pd) : m_pd{pd} {
     vee::mapmem mem{*m_mem};
-    auto *pix = static_cast<point *>(*mem);
-    pix[0] = {-1.0, -1.0, 0.0, 0.0};
-    pix[1] = {1.0, 1.0, 0.0, 0.0};
-    pix[2] = {1.0, -1.0, 0.0, 0.0};
+    *static_cast<quad *>(*mem) = {
+        tri{{
+            {-1.0, -1.0, 0.0, 0.0},
+            {1.0, 1.0, 0.0, 0.0},
+            {1.0, -1.0, 0.0, 0.0},
+        }},
+        tri{{
+            {1.0, 1.0, 0.0, 0.0},
+            {-1.0, -1.0, 0.0, 0.0},
+            {-1.0, 1.0, 0.0, 0.0},
+        }},
+    };
   }
 
-  [[nodiscard]] constexpr auto buf() const noexcept { return *m_buf; }
+  void run(vee::command_buffer cb) {
+    vee::cmd_bind_vertex_buffers(cb, 0, *m_buf);
+    vee::cmd_draw(cb, 6);
+  }
 };
 
 class pipeline {
@@ -61,7 +78,7 @@ public:
 };
 
 class program {
-  triangle m_t;
+  bound_quad m_t;
   pipeline m_p;
 
 public:
@@ -70,8 +87,7 @@ public:
 
   void run(vee::command_buffer cb) {
     vee::cmd_bind_gr_pipeline(cb, m_p.ppl());
-    vee::cmd_bind_vertex_buffers(cb, 0, m_t.buf());
-    vee::cmd_draw(cb, 3);
+    m_t.run(cb);
   }
 };
 
