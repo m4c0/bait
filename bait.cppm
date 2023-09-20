@@ -28,16 +28,29 @@ struct colour {
   float b;
   float a;
 };
+struct area {
+  float x;
+  float y;
+  float w;
+  float h;
+};
 struct inst {
   colour from;
   colour to;
+  area rect;
 };
 struct all {
   quad q{};
-  inst i[1]{
+  inst i[2]{
       inst{
           .from = {1.0, 1.0, 1.0, 1.0},
           .to = {0, 0, 0, 1},
+          .rect = {-1.0, -1.0, 1.0, 2.0},
+      },
+      inst{
+          .from = {0.0, 1.0, 1.0, 1.0},
+          .to = {1, 0, 0, 1},
+          .rect = {0.0, -1.0, 1.0, 2.0},
       },
   };
 };
@@ -86,8 +99,9 @@ class pipeline {
       },
       {
           vee::vertex_attribute_vec2(0, 0),
-          vee::vertex_attribute_vec4(1, 0),
+          vee::vertex_attribute_vec4(1, offsetof(inst, from)),
           vee::vertex_attribute_vec4(1, offsetof(inst, to)),
+          vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
 
 public:
