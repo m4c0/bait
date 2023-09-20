@@ -9,6 +9,7 @@ import vee;
 
 static constexpr const auto width = 1280;
 static constexpr const auto height = 768;
+static constexpr const auto filename = "out/test.jpg";
 
 struct point {
   float x;
@@ -114,6 +115,6 @@ extern "C" int main() {
 
   vee::mapmem mem{*o_mem};
   auto *data = static_cast<stbi::pixel *>(*mem);
-  stbi::write_rgba_unsafe("out/test.png", width, height, data);
-  silog::log(silog::info, "output written to out/test.png");
+  stbi::write_rgba_unsafe(filename, width, height, data);
+  silog::log(silog::info, "output written to [%s]", filename);
 }
