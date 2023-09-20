@@ -10,14 +10,13 @@ static constexpr const auto filename = "out/test.jpg";
 struct point {
   float x;
   float y;
-  float z;
-  float w;
-};
-struct tri {
-  point ps[3];
+  float r;
+  float g;
+  float b;
+  float a;
 };
 struct quad {
-  tri t[2];
+  point ps[6];
 };
 
 class bound_quad {
@@ -30,18 +29,15 @@ class bound_quad {
 public:
   bound_quad(vee::physical_device pd) : m_pd{pd} {
     vee::mapmem mem{*m_mem};
-    *static_cast<quad *>(*mem) = {
-        tri{{
-            {-1.0, -1.0, 0.0, 0.0},
-            {1.0, 1.0, 0.0, 0.0},
-            {1.0, -1.0, 0.0, 0.0},
-        }},
-        tri{{
-            {1.0, 1.0, 0.0, 0.0},
-            {-1.0, -1.0, 0.0, 0.0},
-            {-1.0, 1.0, 0.0, 0.0},
-        }},
-    };
+    *static_cast<quad *>(*mem) = quad{{
+        {-1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
+
+        {1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, -1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+    }};
   }
 
   void run(vee::command_buffer cb) {
@@ -69,6 +65,7 @@ class pipeline {
       },
       {
           vee::vertex_attribute_vec2(0, 0),
+          vee::vertex_attribute_vec4(0, 2 * sizeof(float)),
       });
 
 public:
