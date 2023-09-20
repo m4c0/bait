@@ -102,5 +102,8 @@ extern "C" int main() {
   });
 
   vee::device_wait_idle();
-  silog::log(silog::debug, "ok");
+
+  vee::mapmem mem{*o_mem};
+  auto *data = static_cast<unsigned *>(*mem);
+  silog::log(silog::debug, "ok? %08x %08x", data[0], data[1]);
 }
