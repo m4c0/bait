@@ -41,7 +41,7 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
 
   d = 0.005 / (d - th * 0.1);
   vec3 m = mix(smp_c.xyz, vec3(d) * smp_c.xyz, step(0, d));
-  return vec4(m, d);
+  return vec4(m, mix(1, d, step(0, d)));
 }
 
 void main() {
