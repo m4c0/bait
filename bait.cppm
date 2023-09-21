@@ -9,6 +9,8 @@ import vee;
 static constexpr const auto width = 1280;
 static constexpr const auto height = 768;
 static constexpr const auto filename = "out/test.jpg";
+static constexpr const auto icon_left = "photoshop.jpg";
+static constexpr const auto icon_right = "photoshop.jpg";
 
 struct point {
   float x;
@@ -71,6 +73,41 @@ public:
   }
 };
 
+class icon {
+  unsigned m_w;
+  unsigned m_h;
+
+  vee::buffer m_sbuf;
+  vee::device_memory m_smem;
+
+  vee::image m_img;
+  vee::device_memory m_mem;
+  vee::image_view m_iv;
+
+public:
+  icon(const char *file, vee::physical_device pd) {
+    m_w = 32;
+    m_h = 32;
+
+    m_sbuf = vee::create_transfer_src_buffer(m_w * m_h * sizeof(float));
+    m_smem = vee::create_host_buffer_memory(pd, *m_sbuf);
+    vee::bind_buffer_memory(*m_sbuf, *m_smem);
+
+    m_img = vee::create_srgba_image({m_w, m_h});
+    m_mem = vee::create_local_image_memory(pd, *m_img);
+    vee::bind_image_memory(*m_img, *m_mem);
+    m_iv = vee::create_srgba_image_view(*m_img);
+  }
+
+  [[nodiscard]] auto iv() const noexcept { return *m_iv; }
+
+  void run(vee::command_buffer cb) {
+    vee::cmd_pipeline_barrier(cb, *m_img, vee::from_host_to_transfer);
+    vee::cmd_copy_buffer_to_image(cb, {m_w, m_h}, *m_sbuf, *m_img);
+    vee::cmd_pipeline_barrier(cb, *m_img, vee::from_transfer_to_fragment);
+  }
+};
+
 struct upc {
   float aspect;
 };
@@ -107,34 +144,28 @@ class pipeline {
           vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
 
+  icon m_left;
+  icon m_right;
+
   upc m_pc;
 
 public:
-  pipeline(const vee::render_pass &rp) : m_rp{rp} {
-    vee::update_descriptor_set(m_dset, 0, nullptr, *m_smp);
-    vee::update_descriptor_set(m_dset, 1, nullptr, *m_smp);
+  pipeline(vee::physical_device pd, const vee::render_pass &rp)
+      : m_rp{rp}, m_left{icon_left, pd}, m_right{icon_right, pd} {
+    vee::update_descriptor_set(m_dset, 0, m_left.iv(), *m_smp);
+    vee::update_descriptor_set(m_dset, 1, m_right.iv(), *m_smp);
   }
 
+  void prerun(vee::command_buffer cb) {
+    m_left.run(cb);
+    m_right.run(cb);
+  }
   void run(vee::command_buffer cb) {
     m_pc.aspect = static_cast<float>(width) / static_cast<float>(height);
 
     vee::cmd_bind_gr_pipeline(cb, *m_gp);
     vee::cmd_bind_descriptor_set(cb, *m_pl, 0, m_dset);
     vee::cmd_push_vert_frag_constants(cb, *m_pl, &m_pc);
-  }
-};
-
-class program {
-  bound_quad m_t;
-  pipeline m_p;
-
-public:
-  program(const vee::physical_device pd, const vee::render_pass &rp)
-      : m_t{pd}, m_p{rp} {}
-
-  void run(vee::command_buffer cb) {
-    m_p.run(cb);
-    m_t.run(cb);
   }
 };
 
@@ -173,11 +204,14 @@ extern "C" int main() {
   vee::command_pool cp = vee::create_command_pool(qf);
   vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 
-  program p{pd, rp};
+  bound_quad t{pd};
+  pipeline p{pd, rp};
 
   {
     vee::begin_cmd_buf_one_time_submit(cb);
     {
+      p.prerun(cb);
+
       vee::cmd_begin_render_pass({
           .command_buffer = cb,
           .render_pass = *rp,
@@ -186,6 +220,7 @@ extern "C" int main() {
           .clear_color = {{0.1, 0.2, 0.3, 1.0}},
       });
       p.run(cb);
+      t.run(cb);
       vee::cmd_end_render_pass(cb);
     }
     vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
