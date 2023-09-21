@@ -77,12 +77,21 @@ struct upc {
 class pipeline {
   const vee::render_pass &m_rp;
 
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+
+  vee::descriptor_set_layout m_dsl =
+      vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
+
+  vee::descriptor_pool m_dp =
+      vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
+  vee::descriptor_set m_dset = vee::allocate_descriptor_set(*m_dp, *m_dsl);
+
   vee::shader_module m_vert =
       vee::create_shader_module_from_resource("bait.vert.spv");
   vee::shader_module m_frag =
       vee::create_shader_module_from_resource("bait.frag.spv");
-  vee::pipeline_layout m_pl =
-      vee::create_pipeline_layout({vee::vert_frag_push_constant_range<upc>()});
+  vee::pipeline_layout m_pl = vee::create_pipeline_layout(
+      {*m_dsl}, {vee::vert_frag_push_constant_range<upc>()});
   vee::gr_pipeline m_gp = vee::create_graphics_pipeline(
       *m_pl, *m_rp,
       {
@@ -101,12 +110,15 @@ class pipeline {
   upc m_pc;
 
 public:
-  pipeline(const vee::render_pass &rp) : m_rp{rp} {}
+  pipeline(const vee::render_pass &rp) : m_rp{rp} {
+    vee::update_descriptor_set(m_dset, 0, nullptr, *m_smp);
+  }
 
   void run(vee::command_buffer cb) {
     m_pc.aspect = static_cast<float>(width) / static_cast<float>(height);
 
     vee::cmd_bind_gr_pipeline(cb, *m_gp);
+    vee::cmd_bind_descriptor_set(cb, *m_pl, 0, m_dset);
     vee::cmd_push_vert_frag_constants(cb, *m_pl, &m_pc);
   }
 };
