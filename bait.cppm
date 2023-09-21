@@ -10,7 +10,7 @@ static constexpr const auto width = 1280;
 static constexpr const auto height = 768;
 static constexpr const auto filename = "out/test.jpg";
 static constexpr const auto icon_left = "photoshop.jpg";
-static constexpr const auto icon_right = "photoshop.jpg";
+static constexpr const auto icon_right = "vim.png";
 
 struct point {
   float x;
