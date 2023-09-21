@@ -35,8 +35,6 @@ struct area {
   float h;
 };
 struct inst {
-  colour from;
-  colour to;
   area rect;
 };
 static constexpr long double operator""_u(long double a) { return a / 256.0f; };
@@ -44,14 +42,7 @@ struct all {
   quad q{};
   inst i[2]{
       inst{
-          .from = {160._u, 200._u, 0._u},
-          .to = {160._u, 140._u, 0._u},
-          .rect = {-1.0, -1.0, 1.0, 2.0},
-      },
-      inst{
-          .from = {65._u, 150._u, 225._u},
-          .to = {100._u, 250._u, 243._u},
-          .rect = {0.0, -1.0, 1.0, 2.0},
+          .rect = {-1.0, -1.0, 2.0, 2.0},
       },
   };
 };
@@ -104,8 +95,6 @@ class pipeline {
       },
       {
           vee::vertex_attribute_vec2(0, 0),
-          vee::vertex_attribute_vec4(1, offsetof(inst, from)),
-          vee::vertex_attribute_vec4(1, offsetof(inst, to)),
           vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
 

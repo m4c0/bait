@@ -3,7 +3,6 @@
 layout(push_constant) uniform upc { float aspect; } pc;
 
 layout(location = 0) in vec2 frag_coord;
-layout(location = 1) in vec4 gradient;
 
 layout(location = 0) out vec4 frag_colour;
 
