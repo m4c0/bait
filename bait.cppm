@@ -86,17 +86,29 @@ class icon {
 
 public:
   icon(const char *file, vee::physical_device pd) {
-    m_w = 32;
-    m_h = 32;
+    stbi::load(file)
+        .map([this, pd](auto &&img) {
+          m_w = img.width;
+          m_h = img.height;
 
-    m_sbuf = vee::create_transfer_src_buffer(m_w * m_h * sizeof(float));
-    m_smem = vee::create_host_buffer_memory(pd, *m_sbuf);
-    vee::bind_buffer_memory(*m_sbuf, *m_smem);
+          m_sbuf = vee::create_transfer_src_buffer(m_w * m_h * 4);
+          m_smem = vee::create_host_buffer_memory(pd, *m_sbuf);
+          vee::bind_buffer_memory(*m_sbuf, *m_smem);
 
-    m_img = vee::create_srgba_image({m_w, m_h});
-    m_mem = vee::create_local_image_memory(pd, *m_img);
-    vee::bind_image_memory(*m_img, *m_mem);
-    m_iv = vee::create_srgba_image_view(*m_img);
+          m_img = vee::create_srgba_image({m_w, m_h});
+          m_mem = vee::create_local_image_memory(pd, *m_img);
+          vee::bind_image_memory(*m_img, *m_mem);
+          m_iv = vee::create_srgba_image_view(*m_img);
+
+          vee::mapmem m{*m_smem};
+          auto *c = static_cast<unsigned char *>(*m);
+          for (auto i = 0; i < m_w * m_h * 4; i++) {
+            c[i] = (*img.data)[i];
+          }
+        })
+        .take([](auto msg) {
+          silog::log(silog::error, "Failed loading resource image: %s", msg);
+        });
   }
 
   [[nodiscard]] auto iv() const noexcept { return *m_iv; }
