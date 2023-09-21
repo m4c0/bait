@@ -16,5 +16,5 @@ void main() {
   vec2 p = rect.xy + position * rect.zw;
   gl_Position = vec4(p, 0, 1);
   gradient = mix(colour_from, colour_to, position.y);
-  frag_coord = p * 2.0 - 1.0f;
+  frag_coord = vec2(p.x * pc.aspect, p.y);
 }
