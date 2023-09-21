@@ -79,11 +79,11 @@ class pipeline {
 
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
 
-  vee::descriptor_set_layout m_dsl =
-      vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
+  vee::descriptor_set_layout m_dsl = vee::create_descriptor_set_layout(
+      {vee::dsl_fragment_sampler(), vee::dsl_fragment_sampler()});
 
   vee::descriptor_pool m_dp =
-      vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
+      vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
   vee::descriptor_set m_dset = vee::allocate_descriptor_set(*m_dp, *m_dsl);
 
   vee::shader_module m_vert =
@@ -112,6 +112,7 @@ class pipeline {
 public:
   pipeline(const vee::render_pass &rp) : m_rp{rp} {
     vee::update_descriptor_set(m_dset, 0, nullptr, *m_smp);
+    vee::update_descriptor_set(m_dset, 1, nullptr, *m_smp);
   }
 
   void run(vee::command_buffer cb) {

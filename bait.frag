@@ -2,6 +2,7 @@
 
 layout(push_constant) uniform upc { float aspect; } pc;
 layout(set = 0, binding = 0) uniform sampler2D icon_left;
+layout(set = 0, binding = 1) uniform sampler2D icon_right;
 
 layout(location = 0) in vec2 frag_coord;
 
