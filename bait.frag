@@ -26,18 +26,26 @@ float sd_rect(vec2 p, vec2 a, vec2 b, float th) {
   return sd_box(q, vec2(length(b - a) * 0.5, th));
 }
 
-void main() {
-  vec2 a = vec2(0.3, 0.2);
-  vec2 b = a + 0.4 * normalize(vec2(0.6, -0.1));
+vec4 sq(vec2 a, vec2 b, float s) {
+  b = a + s * normalize(b);
+
   float th = 0.2;
 
   vec2 dv = dvf_rect(frag_coord, a, b, th);
-  float d = sd_rect(frag_coord, a, b, th);
+  float d = sd_box(dv, vec2(th));
 
   vec2 uv = dv * 2.0 + 0.5;
 
   d = 0.005 / (d - th * 0.1);
   vec3 m = mix(vec3(uv, 1), vec3(d), step(0, d));
+  return vec4(m, d);
+}
+
+void main() {
+  vec4 s1 = sq(vec2(0.5, 0.2), vec2(0.6, -0.1), 0.4);
+  vec4 s2 = sq(vec2(-0.9, -0.1), vec2(0.6, 0.1), 0.3);
+
+  vec3 m = s1.xyz + s2.xyz;
 
   frag_colour = vec4(m, 1);
 }
