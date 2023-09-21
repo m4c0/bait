@@ -40,7 +40,7 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   vec4 smp_c = texture(smp, uv);
 
   d = 0.005 / (d - th * 0.1);
-  vec3 m = smp_c.xyz + step(0, d);
+  vec3 m = mix(smp_c.xyz, vec3(d) * smp_c.xyz, step(0, d));
   return vec4(m, d);
 }
 
@@ -48,7 +48,7 @@ void main() {
   vec4 sl = sq(vec2(-0.9, -0.1), vec2(0.6, 0.1), 0.25, icon_left);
   vec4 sr = sq(vec2(0.5, 0.2), vec2(0.6, -0.1), 0.3, icon_right);
 
-  vec3 m = sr.xyz + sl.xyz;
+  vec3 m = pow(sr.xyz, vec3(0.4)) + sl.xyz * 0.2;
 
   frag_colour = vec4(m, 1);
 }
