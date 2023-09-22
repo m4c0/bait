@@ -75,13 +75,20 @@ vec2 op_rot(vec2 p, float a) {
   return mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
 }
 
-float arrow() {
-  vec2 p = frag_coord + vec2(0.8, 0.0);
-  vec2 end_pos = rot(-1.7) * p;
+float arrow_body(vec2 p) {
+  vec2 end_pos = rot(-1.5) * p;
   vec2 pos = mix(p, end_pos, length(p));
-  float arc = sd_isotri(pos, 0.1, 0.5);
+  return sd_isotri(pos, 0.1, 0.45);
+}
+float arrow_head(vec2 p) {
+  p = rot(1.3) * p;
+  return sd_isotri(p, 0.15, 0.4);
+}
+float arrow(vec2 p) {
+  float arc = arrow_body(p + vec2(0.8, 0.0));
+  float head = arrow_head(p + vec2(0.03, -0.25));
 
-  float d = arc;
+  float d = min(arc, head);
   d = 0.002 / clamp(d, 0, 1);
   return d;
 }
@@ -93,7 +100,7 @@ void main() {
   float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
   x = 0.002 / abs(x);
 
-  float arr = arrow();
+  float arr = arrow(frag_coord + vec2(0.0, 0.07));
 
   vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(arr + x, 0, 0) + sl.xyz * 0.2;
 
