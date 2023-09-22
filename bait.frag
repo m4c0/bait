@@ -51,21 +51,28 @@ float sd_isotri(vec2 p, float w, float h) {
   return -sqrt(d.x) * sign(d.y);
 }
 
-vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
+vec4 sq(vec2 p, vec2 a, vec2 b, float s, sampler2D smp) {
   b = a + s * normalize(b);
 
   float th = s;
 
-  vec2 dv = dvf_rect(frag_coord, a, b, th);
+  vec2 dv = dvf_rect(p, a, b, th);
   float d = sd_box(dv, vec2(th));
 
   vec2 uv = clamp(dv * (2.0 / (1.0+ s)) + 0.5, 0, 1);
 
   vec4 smp_c = texture(smp, uv);
 
-  d = 0.005 / (d - th * 0.1);
-  vec3 m = mix(smp_c.xyz, vec3(d) * smp_c.xyz, step(0, d));
-  return vec4(m, mix(1, d, step(0, d)));
+  vec2 pp = p - (a + b) / 2.0;
+  float r = sqrt(pp.x * pp.x + pp.y * pp.y);
+  float phi = sign(pp.y) * acos(pp.x / r);
+
+  float sp = sin(phi * 20.0);
+
+  float dd = 0.005 / (d - th * 0.1);
+  float c = dd * (1.0 + smoothstep(sp, 0, 1));
+  vec3 m = mix(smp_c.xyz, vec3(c) * smp_c.xyz, step(0, dd));
+  return vec4(m, mix(1, d, step(0, dd)));
 }
 
 mat2 rot(float a) {
@@ -94,8 +101,8 @@ float arrow(vec2 p) {
 }
 
 void main() {
-  vec4 sl = sq(vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
-  vec4 sr = sq(vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
+  vec4 sl = sq(frag_coord, vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
+  vec4 sr = sq(frag_coord, vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
 
   float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
   x = 0.002 / abs(x);
