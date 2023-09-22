@@ -22,6 +22,14 @@ float sd_box(vec2 p, vec2 b) {
   return length(max(d, 0)) + min(max(d.x, d.y), 0);
 }
 
+float sd_arc(vec2 p, float ap, float r, float th) {
+  float s = sin(ap);
+  float c = cos(ap);
+  p.x = abs(p.x);
+  return (p.x * c > p.y * s)
+    ? length(p - vec2(s, c) * r) - th
+    : abs(length(p) - r) - th;
+}
 float sd_rect(vec2 p, vec2 a, vec2 b, float th) {
   vec2 q = dvf_rect(p, a, b, th);
   return sd_box(q, vec2(length(b - a) * 0.5, th));
@@ -48,6 +56,16 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   return vec4(m, mix(1, d, step(0, d)));
 }
 
+float arrow() {
+  float a = 0.4;
+  vec2 pos = mat2(cos(a), -sin(a), sin(a), cos(a)) * frag_coord;
+  pos += vec2(0.4, 0.5);
+
+  float d = sd_arc(pos, 0.4, 0.8, 0.02);
+  d = 0.002 / abs(d);
+  return d;
+}
+
 void main() {
   vec4 sl = sq(vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
   vec4 sr = sq(vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
@@ -55,7 +73,9 @@ void main() {
   float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
   x = 0.002 / abs(x);
 
-  vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(x, 0, 0) + sl.xyz * 0.2;
+  float arr = arrow();
+
+  vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(arr + x, 0, 0) + sl.xyz * 0.2;
 
   frag_colour = vec4(m, 1);
 }
