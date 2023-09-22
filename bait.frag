@@ -56,12 +56,17 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   return vec4(m, mix(1, d, step(0, d)));
 }
 
-float arrow() {
-  float a = 0.4;
-  vec2 pos = mat2(cos(a), -sin(a), sin(a), cos(a)) * frag_coord;
-  pos += vec2(0.4, 0.5);
+vec2 op_rot(vec2 p, float a) {
+  return mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
+}
 
-  float d = sd_arc(pos, 0.4, 0.8, 0.02);
+float arrow() {
+  vec2 arc_pos = op_rot(frag_coord, 0.4) + vec2(0.4, 0.5);
+  float arc = sd_arc(arc_pos, 0.4, 0.8, 0.02);
+
+  float x = sd_x(frag_coord + vec2(0.1, -0.15), 0.1, 0.05);
+
+  float d = min(arc, x);
   d = 0.002 / abs(d);
   return d;
 }
