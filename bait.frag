@@ -38,6 +38,18 @@ float sd_x(vec2 p, float w, float r) {
   p = abs(p);
   return length(p - min(p.x + p.y, w) * 0.5) - r;
 }
+float sd_isotri(vec2 p, float w, float h) {
+  vec2 q = vec2(w, h);
+  p.x = abs(p.x);
+
+  vec2 a = p - q * clamp(dot(p, q) / dot(q, q), 0.0, 1.0);
+  vec2 b = p - q * vec2(clamp(p.x / q.x, 0.0, 1.0), 1.0);
+
+  float s = -sign(q.y);
+  vec2 d = min(vec2(dot(a, a), s * (p.x * q.y - p.y * q.x)),
+               vec2(dot(b, b), s * (p.y - q.y)));
+  return -sqrt(d.x) * sign(d.y);
+}
 
 vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   b = a + s * normalize(b);
@@ -56,18 +68,21 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   return vec4(m, mix(1, d, step(0, d)));
 }
 
+mat2 rot(float a) {
+  return mat2(cos(a), -sin(a), sin(a), cos(a));
+}
 vec2 op_rot(vec2 p, float a) {
   return mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
 }
 
 float arrow() {
-  vec2 arc_pos = op_rot(frag_coord, 0.4) + vec2(0.4, 0.5);
-  float arc = sd_arc(arc_pos, 0.4, 0.8, 0.02);
+  vec2 p = frag_coord + vec2(0.8, 0.0);
+  vec2 end_pos = rot(-1.7) * p;
+  vec2 pos = mix(p, end_pos, length(p));
+  float arc = sd_isotri(pos, 0.1, 0.5);
 
-  float x = sd_x(frag_coord + vec2(0.1, -0.15), 0.1, 0.05);
-
-  float d = min(arc, x);
-  d = 0.002 / abs(d);
+  float d = arc;
+  d = 0.002 / clamp(d, 0, 1);
   return d;
 }
 
