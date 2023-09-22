@@ -26,6 +26,10 @@ float sd_rect(vec2 p, vec2 a, vec2 b, float th) {
   vec2 q = dvf_rect(p, a, b, th);
   return sd_box(q, vec2(length(b - a) * 0.5, th));
 }
+float sd_x(vec2 p, float w, float r) {
+  p = abs(p);
+  return length(p - min(p.x + p.y, w) * 0.5) - r;
+}
 
 vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   b = a + s * normalize(b);
@@ -35,7 +39,7 @@ vec4 sq(vec2 a, vec2 b, float s, sampler2D smp) {
   vec2 dv = dvf_rect(frag_coord, a, b, th);
   float d = sd_box(dv, vec2(th));
 
-  vec2 uv = clamp(dv * (2.0 - s) + 0.5, 0, 1);
+  vec2 uv = clamp(dv * (2.0 / (1.0+ s)) + 0.5, 0, 1);
 
   vec4 smp_c = texture(smp, uv);
 
@@ -48,7 +52,10 @@ void main() {
   vec4 sl = sq(vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
   vec4 sr = sq(vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
 
-  vec3 m = pow(sr.xyz, vec3(0.4)) + sl.xyz * 0.2;
+  float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
+  x = 0.002 / abs(x);
+
+  vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(x, 0, 0) + sl.xyz * 0.2;
 
   frag_colour = vec4(m, 1);
 }
