@@ -109,7 +109,11 @@ void main() {
 
   float arr = arrow(frag_coord + vec2(0.0, 0.07));
 
+  float box = sd_box(frag_coord, vec2(pc.aspect, 1.0));
+  box = -box * 15.0 + 3.0;
+  box = smoothstep(box, -2.0, 2.2);
+
   vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(arr + x, 0, 0) + sl.xyz * 0.2;
 
-  frag_colour = vec4(m, 1);
+  frag_colour = vec4(m * box, 1);
 }
