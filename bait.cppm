@@ -183,6 +183,7 @@ public:
 
 extern "C" int main() {
   vee::instance i = vee::create_instance("bait");
+  vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
   auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
 
   vee::device d = vee::create_single_queue_device(pd, qf);
@@ -240,10 +241,8 @@ extern "C" int main() {
     vee::end_cmd_buf(cb);
   }
 
-  vee::fence f = vee::create_fence_signaled();
   vee::queue_submit({
       .queue = q,
-      .fence = *f,
       .command_buffer = cb,
   });
 
