@@ -232,6 +232,8 @@ extern "C" int main() {
           .extent = {width, height},
           .clear_color = {{0.1, 0.2, 0.3, 1.0}},
       });
+      vee::cmd_set_scissor(cb, {width, height});
+      vee::cmd_set_viewport(cb, {width, height});
       p.run(cb);
       t.run(cb);
       vee::cmd_end_render_pass(cb);
