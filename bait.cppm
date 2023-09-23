@@ -12,6 +12,10 @@ static constexpr const auto filename = "out/test.jpg";
 static constexpr const auto icon_left = "photoshop.jpg";
 static constexpr const auto icon_right = "vim.png";
 
+struct upc {
+  float aspect;
+};
+
 struct point {
   float x;
   float y;
@@ -47,30 +51,6 @@ struct all {
           .rect = {-1.0, -1.0, 2.0, 2.0},
       },
   };
-};
-
-class bound_quad {
-  vee::physical_device m_pd;
-
-  vee::buffer m_quad = vee::create_vertex_buffer(sizeof(all::q));
-  vee::buffer m_inst = vee::create_vertex_buffer(sizeof(all::i));
-
-  vee::device_memory m_mem = vee::create_host_buffer_memory(m_pd, sizeof(all));
-
-public:
-  bound_quad(vee::physical_device pd) : m_pd{pd} {
-    vee::bind_buffer_memory(*m_quad, *m_mem, 0);
-    vee::bind_buffer_memory(*m_inst, *m_mem, sizeof(quad));
-
-    vee::mapmem mem{*m_mem};
-    *static_cast<all *>(*mem) = {};
-  }
-
-  void run(vee::command_buffer cb) {
-    vee::cmd_bind_vertex_buffers(cb, 0, *m_quad);
-    vee::cmd_bind_vertex_buffers(cb, 1, *m_inst);
-    vee::cmd_draw(cb, 6, sizeof(all::i) / sizeof(inst));
-  }
 };
 
 class icon {
@@ -120,32 +100,83 @@ public:
   }
 };
 
-struct upc {
-  float aspect;
-};
-class pipeline {
-  const vee::render_pass &m_rp;
+extern "C" int main() {
+  // Instance
+  vee::instance i = vee::create_instance("bait");
+  vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
+  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
 
-  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+  // Device
+  vee::device d = vee::create_single_queue_device(pd, qf);
+  vee::queue q = vee::get_queue_for_family(qf);
 
-  vee::descriptor_set_layout m_dsl = vee::create_descriptor_set_layout(
+  // Colour buffer
+  vee::image t_img = vee::create_renderable_image({width, height});
+  vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
+  vee::bind_image_memory(*t_img, *t_mem);
+  vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
+
+  // Depth buffer
+  vee::image d_img = vee::create_depth_image({width, height});
+  vee::device_memory d_mem = vee::create_local_image_memory(pd, *d_img);
+  vee::bind_image_memory(*d_img, *d_mem);
+  vee::image_view d_iv = vee::create_depth_image_view(*d_img);
+
+  // Host-readable output buffer
+  vee::buffer o_buf = vee::create_transfer_dst_buffer(width * height * 4);
+  vee::device_memory o_mem = vee::create_host_buffer_memory(pd, *o_buf);
+  vee::bind_buffer_memory(*o_buf, *o_mem);
+
+  // Renderpass + Framebuffer
+  vee::render_pass rp = vee::create_render_pass(pd, nullptr);
+  vee::fb_params fbp{
+      .physical_device = pd,
+      .render_pass = *rp,
+      .image_buffer = *t_iv,
+      .depth_buffer = *d_iv,
+      .extent = {width, height},
+  };
+  vee::framebuffer fb = vee::create_framebuffer(fbp);
+
+  // Inputs (vertices + instance)
+  vee::buffer q_buf = vee::create_vertex_buffer(sizeof(all::q));
+  vee::buffer i_buf = vee::create_vertex_buffer(sizeof(all::i));
+  vee::device_memory iq_mem = vee::create_host_buffer_memory(pd, sizeof(all));
+  vee::bind_buffer_memory(*q_buf, *iq_mem, 0);
+  vee::bind_buffer_memory(*i_buf, *iq_mem, sizeof(quad));
+  {
+    vee::mapmem mem{*iq_mem};
+    *static_cast<all *>(*mem) = {};
+  }
+
+  // Textures
+  icon left{icon_left, pd};
+  icon right{icon_right, pd};
+
+  // Descriptor pool
+  vee::descriptor_set_layout dsl = vee::create_descriptor_set_layout(
       {vee::dsl_fragment_sampler(), vee::dsl_fragment_sampler()});
 
-  vee::descriptor_pool m_dp =
+  vee::descriptor_pool dp =
       vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
-  vee::descriptor_set m_dset = vee::allocate_descriptor_set(*m_dp, *m_dsl);
+  vee::descriptor_set dset = vee::allocate_descriptor_set(*dp, *dsl);
 
-  vee::shader_module m_vert =
+  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
+  vee::update_descriptor_set(dset, 0, left.iv(), *smp);
+  vee::update_descriptor_set(dset, 1, right.iv(), *smp);
+
+  // Pipeline
+  vee::shader_module vert =
       vee::create_shader_module_from_resource("bait.vert.spv");
-  vee::shader_module m_frag =
+  vee::shader_module frag =
       vee::create_shader_module_from_resource("bait.frag.spv");
-  vee::pipeline_layout m_pl = vee::create_pipeline_layout(
-      {*m_dsl}, {vee::vert_frag_push_constant_range<upc>()});
-  vee::gr_pipeline m_gp = vee::create_graphics_pipeline(
-      *m_pl, *m_rp,
+  vee::pipeline_layout pl = vee::create_pipeline_layout(
+      {*dsl}, {vee::vert_frag_push_constant_range<upc>()});
+  vee::gr_pipeline gp = vee::create_graphics_pipeline(
+      *pl, *rp,
       {
-          vee::pipeline_vert_stage(*m_vert, "main"),
-          vee::pipeline_frag_stage(*m_frag, "main"),
+          vee::pipeline_vert_stage(*vert, "main"),
+          vee::pipeline_frag_stage(*frag, "main"),
       },
       {
           vee::vertex_input_bind(sizeof(point)),
@@ -156,74 +187,20 @@ class pipeline {
           vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
 
-  icon m_left;
-  icon m_right;
-
-  upc m_pc;
-
-public:
-  pipeline(vee::physical_device pd, const vee::render_pass &rp)
-      : m_rp{rp}, m_left{icon_left, pd}, m_right{icon_right, pd} {
-    vee::update_descriptor_set(m_dset, 0, m_left.iv(), *m_smp);
-    vee::update_descriptor_set(m_dset, 1, m_right.iv(), *m_smp);
-  }
-
-  void prerun(vee::command_buffer cb) {
-    m_left.run(cb);
-    m_right.run(cb);
-  }
-  void run(vee::command_buffer cb) {
-    m_pc.aspect = static_cast<float>(width) / static_cast<float>(height);
-
-    vee::cmd_bind_gr_pipeline(cb, *m_gp);
-    vee::cmd_bind_descriptor_set(cb, *m_pl, 0, m_dset);
-    vee::cmd_push_vert_frag_constants(cb, *m_pl, &m_pc);
-  }
-};
-
-extern "C" int main() {
-  vee::instance i = vee::create_instance("bait");
-  vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
-  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
-
-  vee::device d = vee::create_single_queue_device(pd, qf);
-  vee::queue q = vee::get_queue_for_family(qf);
-
-  vee::render_pass rp = vee::create_render_pass(pd, nullptr);
-
-  vee::image t_img = vee::create_renderable_image({width, height});
-  vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
-  vee::bind_image_memory(*t_img, *t_mem);
-  vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
-
-  vee::image d_img = vee::create_depth_image({width, height});
-  vee::device_memory d_mem = vee::create_local_image_memory(pd, *d_img);
-  vee::bind_image_memory(*d_img, *d_mem);
-  vee::image_view d_iv = vee::create_depth_image_view(*d_img);
-
-  vee::buffer o_buf = vee::create_transfer_dst_buffer(width * height * 4);
-  vee::device_memory o_mem = vee::create_host_buffer_memory(pd, *o_buf);
-  vee::bind_buffer_memory(*o_buf, *o_mem);
-
-  vee::fb_params fbp{
-      .physical_device = pd,
-      .render_pass = *rp,
-      .image_buffer = *t_iv,
-      .depth_buffer = *d_iv,
-      .extent = {width, height},
-  };
-  vee::framebuffer fb = vee::create_framebuffer(fbp);
-
+  // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
   vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 
-  bound_quad t{pd};
-  pipeline p{pd, rp};
-
+  // Build command buffer
   {
+    upc pc{
+        .aspect = static_cast<float>(width) / static_cast<float>(height),
+    };
+
     vee::begin_cmd_buf_one_time_submit(cb);
     {
-      p.prerun(cb);
+      left.run(cb);
+      right.run(cb);
 
       vee::cmd_begin_render_pass({
           .command_buffer = cb,
@@ -234,8 +211,14 @@ extern "C" int main() {
       });
       vee::cmd_set_scissor(cb, {width, height});
       vee::cmd_set_viewport(cb, {width, height});
-      p.run(cb);
-      t.run(cb);
+
+      vee::cmd_bind_gr_pipeline(cb, *gp);
+      vee::cmd_bind_descriptor_set(cb, *pl, 0, dset);
+      vee::cmd_push_vert_frag_constants(cb, *pl, &pc);
+
+      vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
+      vee::cmd_bind_vertex_buffers(cb, 1, *i_buf);
+      vee::cmd_draw(cb, 6, sizeof(all::i) / sizeof(inst));
       vee::cmd_end_render_pass(cb);
     }
     vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
@@ -243,13 +226,16 @@ extern "C" int main() {
     vee::end_cmd_buf(cb);
   }
 
+  // Submit
   vee::queue_submit({
       .queue = q,
       .command_buffer = cb,
   });
 
+  // Sync CPU+GPU
   vee::device_wait_idle();
 
+  // Pull data from buffer
   vee::mapmem mem{*o_mem};
   auto *data = static_cast<stbi::pixel *>(*mem);
   stbi::write_rgba_unsafe(filename, width, height, data);
