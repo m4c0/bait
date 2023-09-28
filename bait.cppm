@@ -208,6 +208,7 @@ extern "C" int main() {
           .framebuffer = *fb,
           .extent = {width, height},
           .clear_color = {{0.1, 0.2, 0.3, 1.0}},
+          .use_secondary_cmd_buf = false,
       });
       vee::cmd_set_scissor(cb, {width, height});
       vee::cmd_set_viewport(cb, {width, height});
