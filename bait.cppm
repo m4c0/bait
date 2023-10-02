@@ -3,6 +3,7 @@ import :descriptors;
 import :offscreen;
 import :pipeline;
 import :quad;
+import :surface;
 import casein;
 import sith;
 import sitime;
@@ -10,7 +11,6 @@ import vee;
 
 class thread : public sith::thread {
   casein::native_handle_t m_nptr;
-  volatile float m_aspect;
   volatile bool m_resized;
 
 public:
@@ -18,10 +18,7 @@ public:
     m_nptr = n;
     sith::thread::start();
   }
-  void resize(float aspect) {
-    m_aspect = aspect;
-    m_resized = true;
-  }
+  void resize() { m_resized = true; }
 
   void run() override;
 };
@@ -32,7 +29,8 @@ void thread::run() {
   // Instance
   vee::instance i = vee::create_instance("bait");
   vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
-  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
+  vee::surface s = vee::create_surface(m_nptr);
+  auto [pd, qf] = vee::find_physical_device_with_universal_queue(*s);
 
   // Device
   vee::device d = vee::create_single_queue_device(pd, qf);
@@ -44,6 +42,9 @@ void thread::run() {
 
   offscreen_framebuffer osfb{pd};
   osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
+
+  surface_framebuffer sfb{pd, s};
+  sfb.set_pipeline(bpl.create_graphics_pipeline(sfb.render_pass()));
 
   // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
@@ -90,10 +91,7 @@ extern "C" void casein_handle(const casein::event &e) {
     res[casein::CREATE_WINDOW] = [](const casein::event &e) {
       t.start(*e.as<casein::events::create_window>());
     };
-    res[casein::RESIZE_WINDOW] = [](const casein::event &e) {
-      auto [w, h, _, __] = *e.as<casein::events::resize_window>();
-      t.resize(static_cast<float>(w) / static_cast<float>(h));
-    };
+    res[casein::RESIZE_WINDOW] = [](auto) { t.resize(); };
     res[casein::QUIT] = [](auto) { t.stop(); };
     return res;
   }();
