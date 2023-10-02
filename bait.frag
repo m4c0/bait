@@ -100,20 +100,78 @@ float arrow(vec2 p) {
   return d;
 }
 
+float map(vec3 p) {
+  float d_sp = length(p) - 0.25;
+
+  float d_fl = p.y + 0.25;
+
+  return min(d_sp, d_fl);
+}
+
+vec3 norm(vec3 p) {
+  vec2 e = vec2(0.0001, 0.0);
+
+  return normalize(vec3(
+        map(p + e.xyy) - map(p - e.xyy),
+        map(p + e.yxy) - map(p - e.yxy),
+        map(p + e.yyx) - map(p - e.yyx)
+        ));
+}
+
+float cast_ray(vec3 ro, vec3 rd) {
+  float t = 0.0;
+  for (int i = 0; i < 100; i++) {
+    vec3 ray = ro + rd * t;
+
+    float dt = map(ray);
+    if (dt < 0.001) break;
+    
+    t += dt;
+    if (t > 20.0) return -1.0;
+  }
+  return t;
+}
+
 void main() {
-  vec4 sl = sq(frag_coord, vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
-  vec4 sr = sq(frag_coord, vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
+  vec2 p = frag_coord;
 
-  float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
-  x = 0.002 / abs(x);
+  float an = 0.0;
 
-  float arr = arrow(frag_coord + vec2(0.0, 0.07));
+  vec3 ro = vec3(1.0 * sin(an), 0.0, 1.0 * cos(an));
+  vec3 ta = vec3(0.0, 0.0, 0.0);
 
-  float box = sd_box(frag_coord, vec2(pc.aspect, 1.0));
-  box = -box * 15.0 + 3.0;
-  box = smoothstep(box, -2.0, 2.2);
+  vec3 ww = normalize(ta - ro);
+  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+  vec3 vv = normalize(cross(uu, ww));
 
-  vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(arr + x, 0, 0) + sl.xyz * 0.2;
+  vec3 rd = normalize(p.x * uu + p.y * vv + 1.5 * ww);
 
-  frag_colour = vec4(m * box, 1);
+  float t = cast_ray(ro, rd);
+
+  vec3 col = vec3(0.4, 0.75, 1.0) - 0.7 * p.y;
+  col = mix(col, vec3(0.7, 0.75, 0.8), exp(-10.0 * rd.y));
+
+  if (t > 0.0) {
+    vec3 pos = ro + rd * t;
+    vec3 nor = norm(pos);
+
+    vec3 mate = vec3(0.18);
+
+    vec3 sun_dir = normalize(vec3(0.8, 0.4, 0.2));
+    float sun_dif = clamp(dot(nor, sun_dir), 0.0, 1.0);
+    float sun_shd = step(cast_ray(pos + nor * 0.001, sun_dir), 0.0);
+
+    float sky_dif = clamp(0.5 + 0.5 * dot(nor, vec3(0.0, 1.0, 0.0)), 0.0, 1.0);
+
+    float bou_dif = clamp(0.5 + 0.5 * dot(nor, vec3(0.0, -1.0, 0.0)), 0.0, 1.0);
+
+    col  = mate * vec3(7.0, 4.5, 3.0) * sun_dif * sun_shd;
+    col += mate * vec3(0.5, 0.8, 0.9) * sky_dif;
+    col += mate * vec3(0.7, 0.3, 0.2) * bou_dif;
+  }
+
+  // It seems Bait applies this gamma somehow already
+  // col = pow(col, vec3(0.4545));
+
+  frag_colour = vec4(col, 1);
 }
