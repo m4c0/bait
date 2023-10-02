@@ -27,31 +27,6 @@ struct quad {
   };
 };
 
-struct colour {
-  float r;
-  float g;
-  float b;
-  float a = 1.0f;
-};
-struct area {
-  float x;
-  float y;
-  float w;
-  float h;
-};
-struct inst {
-  area rect;
-};
-static constexpr long double operator""_u(long double a) { return a / 256.0f; };
-struct all {
-  quad q{};
-  inst i[2]{
-      inst{
-          .rect = {-1.0, -1.0, 2.0, 2.0},
-      },
-  };
-};
-
 class icon {
   unsigned m_w;
   unsigned m_h;
@@ -125,11 +100,9 @@ public:
         },
         {
             vee::vertex_input_bind(sizeof(point)),
-            vee::vertex_input_bind_per_instance(sizeof(inst)),
         },
         {
             vee::vertex_attribute_vec2(0, 0),
-            vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
         });
   }
 };
@@ -145,14 +118,12 @@ extern "C" int main() {
   vee::queue q = vee::get_queue_for_family(qf);
 
   // Inputs (vertices + instance)
-  vee::buffer q_buf = vee::create_vertex_buffer(sizeof(all::q));
-  vee::buffer i_buf = vee::create_vertex_buffer(sizeof(all::i));
-  vee::device_memory iq_mem = vee::create_host_buffer_memory(pd, sizeof(all));
-  vee::bind_buffer_memory(*q_buf, *iq_mem, 0);
-  vee::bind_buffer_memory(*i_buf, *iq_mem, sizeof(quad));
+  vee::buffer q_buf = vee::create_vertex_buffer(sizeof(quad));
+  vee::device_memory q_mem = vee::create_host_buffer_memory(pd, sizeof(quad));
+  vee::bind_buffer_memory(*q_buf, *q_mem, 0);
   {
-    vee::mapmem mem{*iq_mem};
-    *static_cast<all *>(*mem) = {};
+    vee::mapmem mem{*q_mem};
+    *static_cast<quad *>(*mem) = {};
   }
 
   // Textures
@@ -199,8 +170,7 @@ extern "C" int main() {
       vee::cmd_push_vert_frag_constants(cb, *bpl, &pc);
 
       vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
-      vee::cmd_bind_vertex_buffers(cb, 1, *i_buf);
-      vee::cmd_draw(cb, 6, sizeof(all::i) / sizeof(inst));
+      vee::cmd_draw(cb, 6);
       vee::cmd_end_render_pass(cb);
     }
     osfb.cmd_copy_to_buffer(cb);
