@@ -5,10 +5,6 @@ struct upc {
   float aspect;
   float time;
 };
-struct point {
-  float x;
-  float y;
-};
 
 class base_pipeline_layout {
   vee::descriptor_set_layout::type dsl;
@@ -35,7 +31,7 @@ public:
             vee::pipeline_frag_stage(*frag, "main"),
         },
         {
-            vee::vertex_input_bind(sizeof(point)),
+            vee::vertex_input_bind(sizeof(float) * 2),
         },
         {
             vee::vertex_attribute_vec2(0, 0),

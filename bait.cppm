@@ -5,15 +5,8 @@ export module bait;
 import :descriptors;
 import :offscreen;
 import :pipeline;
+import :quad;
 import vee;
-
-struct quad {
-  point p[6]{
-      {0.0, 0.0}, {1.0, 1.0}, {1.0, 0.0},
-
-      {1.0, 1.0}, {0.0, 0.0}, {0.0, 1.0},
-  };
-};
 
 extern "C" int main() {
   // Instance
@@ -25,15 +18,7 @@ extern "C" int main() {
   vee::device d = vee::create_single_queue_device(pd, qf);
   vee::queue q = vee::get_queue_for_family(qf);
 
-  // Inputs (vertices + instance)
-  vee::buffer q_buf = vee::create_vertex_buffer(sizeof(quad));
-  vee::device_memory q_mem = vee::create_host_buffer_memory(pd, sizeof(quad));
-  vee::bind_buffer_memory(*q_buf, *q_mem, 0);
-  {
-    vee::mapmem mem{*q_mem};
-    *static_cast<quad *>(*mem) = {};
-  }
-
+  quad_buf q_buf{pd};
   desc_set ds{pd};
   base_pipeline_layout bpl{ds.layout()};
 
