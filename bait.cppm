@@ -107,6 +107,38 @@ public:
   }
 };
 
+class desc_set {
+  vee::physical_device pd;
+
+  // Textures
+  icon left{icon_left, pd};
+  icon right{icon_right, pd};
+
+  // Descriptor set layout + pool
+  vee::descriptor_set_layout dsl = vee::create_descriptor_set_layout(
+      {vee::dsl_fragment_sampler(), vee::dsl_fragment_sampler()});
+
+  vee::descriptor_pool dp =
+      vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
+  vee::descriptor_set dset = vee::allocate_descriptor_set(*dp, *dsl);
+
+  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
+
+public:
+  explicit desc_set(vee::physical_device pd) : pd{pd} {
+    vee::update_descriptor_set(dset, 0, left.iv(), *smp);
+    vee::update_descriptor_set(dset, 1, right.iv(), *smp);
+  }
+
+  [[nodiscard]] const auto &layout() const { return dsl; }
+  [[nodiscard]] auto operator*() const { return dset; }
+
+  void cmd_prepare_images(vee::command_buffer cb) {
+    left.run(cb);
+    right.run(cb);
+  }
+};
+
 extern "C" int main() {
   // Instance
   vee::instance i = vee::create_instance("bait");
@@ -126,25 +158,9 @@ extern "C" int main() {
     *static_cast<quad *>(*mem) = {};
   }
 
-  // Textures
-  icon left{icon_left, pd};
-  icon right{icon_right, pd};
+  desc_set ds{pd};
+  base_pipeline_layout bpl{ds.layout()};
 
-  // Descriptor set layout + pool
-  vee::descriptor_set_layout dsl = vee::create_descriptor_set_layout(
-      {vee::dsl_fragment_sampler(), vee::dsl_fragment_sampler()});
-
-  vee::descriptor_pool dp =
-      vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
-  vee::descriptor_set dset = vee::allocate_descriptor_set(*dp, *dsl);
-
-  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
-  vee::update_descriptor_set(dset, 0, left.iv(), *smp);
-  vee::update_descriptor_set(dset, 1, right.iv(), *smp);
-
-  // Base pipeline layout
-  base_pipeline_layout bpl{dsl};
-  // Offscreen FB
   offscreen_framebuffer osfb{pd};
   osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
 
@@ -161,12 +177,10 @@ extern "C" int main() {
 
     vee::begin_cmd_buf_one_time_submit(cb);
     {
-      left.run(cb);
-      right.run(cb);
+      ds.cmd_prepare_images(cb);
 
       osfb.cmd_begin_render_pass(cb);
-
-      vee::cmd_bind_descriptor_set(cb, *bpl, 0, dset);
+      vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
       vee::cmd_push_vert_frag_constants(cb, *bpl, &pc);
 
       vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
