@@ -53,41 +53,35 @@ void thread::run() {
 
     m_resized = false;
     while (!interrupted() && !m_resized) {
+      auto idx = sfb.wait_reset_and_acquire();
+
       float time = 0.001 * watch.millis();
       osfb.push_constants().time = time;
       sfb.push_constants().time = time;
+
+      // Build command buffer
+      vee::begin_cmd_buf_one_time_submit(cb);
+      {
+        ds.cmd_prepare_images(cb);
+
+        osfb.cmd_begin_render_pass(cb);
+        vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
+        vee::cmd_push_vert_frag_constants(cb, *bpl, &osfb.push_constants());
+
+        vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
+        vee::cmd_draw(cb, 6);
+        vee::cmd_end_render_pass(cb);
+      }
+      osfb.cmd_copy_to_buffer(cb);
+      vee::end_cmd_buf(cb);
+
+      // Submit and present
+      sfb.submit_and_present(q, cb, idx);
+
+      // Pull data from buffer
+      osfb.write_buffer_to_file();
     }
   }
-
-  // Build command buffer
-  {
-
-    upc pc{};
-
-    vee::begin_cmd_buf_one_time_submit(cb);
-    {
-      ds.cmd_prepare_images(cb);
-
-      osfb.cmd_begin_render_pass(cb);
-      vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
-      vee::cmd_push_vert_frag_constants(cb, *bpl, &pc);
-
-      vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
-      vee::cmd_draw(cb, 6);
-      vee::cmd_end_render_pass(cb);
-    }
-    osfb.cmd_copy_to_buffer(cb);
-    vee::end_cmd_buf(cb);
-  }
-
-  // Submit
-  vee::queue_submit({
-      .queue = q,
-      .command_buffer = cb,
-  });
-
-  // Pull data from buffer
-  osfb.write_buffer_to_file();
 }
 
 extern "C" void casein_handle(const casein::event &e) {

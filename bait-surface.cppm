@@ -57,4 +57,24 @@ public:
   }
 
   void set_pipeline(vee::gr_pipeline &&g) { gp = traits::move(gp); }
+
+  auto wait_reset_and_acquire() {
+    vee::wait_and_reset_fence(*f);
+    return vee::acquire_next_image(*swc, *img_available_sema);
+  }
+  void submit_and_present(vee::queue q, vee::command_buffer cb, auto idx) {
+    vee::queue_submit({
+        .queue = q,
+        .fence = *f,
+        .command_buffer = cb,
+        .wait_semaphore = *img_available_sema,
+        .signal_semaphore = *rnd_finished_sema,
+    });
+    vee::queue_present({
+        .queue = q,
+        .swapchain = *swc,
+        .wait_semaphore = *rnd_finished_sema,
+        .image_index = idx,
+    });
+  }
 };
