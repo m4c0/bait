@@ -1,4 +1,5 @@
 export module bait:surface;
+import :pipeline;
 import hai;
 import traits;
 import vee;
@@ -27,6 +28,10 @@ class surface_framebuffer {
   hai::array<vee::framebuffer> fbs;
   vee::gr_pipeline gp{};
 
+  upc pc{
+      .aspect = static_cast<float>(ext.width) / static_cast<float>(ext.height),
+  };
+
 public:
   surface_framebuffer(vee::physical_device pd, const vee::surface &s)
       : pd{pd}, s{*s} {
@@ -46,9 +51,7 @@ public:
     }
   }
 
-  [[nodiscard]] constexpr const auto aspect() const noexcept {
-    return static_cast<float>(ext.width) / static_cast<float>(ext.height);
-  }
+  [[nodiscard]] constexpr auto &push_constants() noexcept { return pc; }
   [[nodiscard]] constexpr const auto &render_pass() const noexcept {
     return rp;
   }

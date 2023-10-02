@@ -1,4 +1,5 @@
 export module bait:offscreen;
+import :pipeline;
 import silog;
 import stubby;
 import traits;
@@ -40,12 +41,14 @@ class offscreen_framebuffer {
   vee::framebuffer fb = vee::create_framebuffer(fbp);
   vee::gr_pipeline gp{};
 
+  upc pc{
+      .aspect = static_cast<float>(width) / static_cast<float>(height),
+  };
+
 public:
   explicit offscreen_framebuffer(vee::physical_device pd) : pd{pd} {}
 
-  [[nodiscard]] constexpr const auto aspect() const noexcept {
-    return static_cast<float>(width) / static_cast<float>(height);
-  }
+  [[nodiscard]] constexpr auto &push_constants() noexcept { return pc; }
   [[nodiscard]] constexpr const auto &render_pass() const noexcept {
     return rp;
   }

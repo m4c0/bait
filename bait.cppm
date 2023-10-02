@@ -43,19 +43,26 @@ void thread::run() {
   offscreen_framebuffer osfb{pd};
   osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
 
-  surface_framebuffer sfb{pd, s};
-  sfb.set_pipeline(bpl.create_graphics_pipeline(sfb.render_pass()));
-
   // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
   vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 
+  while (!interrupted()) {
+    surface_framebuffer sfb{pd, s};
+    sfb.set_pipeline(bpl.create_graphics_pipeline(sfb.render_pass()));
+
+    m_resized = false;
+    while (!interrupted() && !m_resized) {
+      float time = 0.001 * watch.millis();
+      osfb.push_constants().time = time;
+      sfb.push_constants().time = time;
+    }
+  }
+
   // Build command buffer
   {
-    upc pc{
-        .aspect = osfb.aspect(),
-        .time = 0.0,
-    };
+
+    upc pc{};
 
     vee::begin_cmd_buf_one_time_submit(cb);
     {
