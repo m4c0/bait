@@ -1,14 +1,34 @@
-module;
-#define offsetof(t, d) __builtin_offsetof(t, d)
-
 export module bait;
 import :descriptors;
 import :offscreen;
 import :pipeline;
 import :quad;
+import casein;
+import sith;
+import sitime;
 import vee;
 
-extern "C" int main() {
+class thread : public sith::thread {
+  casein::native_handle_t m_nptr;
+  volatile float m_aspect;
+  volatile bool m_resized;
+
+public:
+  void start(casein::native_handle_t n) {
+    m_nptr = n;
+    sith::thread::start();
+  }
+  void resize(float aspect) {
+    m_aspect = aspect;
+    m_resized = true;
+  }
+
+  void run() override;
+};
+
+void thread::run() {
+  sitime::stopwatch watch{};
+
   // Instance
   vee::instance i = vee::create_instance("bait");
   vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
@@ -60,6 +80,25 @@ extern "C" int main() {
 
   // Pull data from buffer
   osfb.write_buffer_to_file();
+}
+
+extern "C" void casein_handle(const casein::event &e) {
+  static thread t{};
+
+  static constexpr auto map = [] {
+    casein::event_map res{};
+    res[casein::CREATE_WINDOW] = [](const casein::event &e) {
+      t.start(*e.as<casein::events::create_window>());
+    };
+    res[casein::RESIZE_WINDOW] = [](const casein::event &e) {
+      auto [w, h, _, __] = *e.as<casein::events::resize_window>();
+      t.resize(static_cast<float>(w) / static_cast<float>(h));
+    };
+    res[casein::QUIT] = [](auto) { t.stop(); };
+    return res;
+  }();
+
+  map.handle(e);
 }
 
 #pragma leco add_shader "bait.vert"
