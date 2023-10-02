@@ -100,32 +100,25 @@ public:
   }
 };
 
-extern "C" int main() {
-  // Instance
-  vee::instance i = vee::create_instance("bait");
-  vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
-  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
-
-  // Device
-  vee::device d = vee::create_single_queue_device(pd, qf);
-  vee::queue q = vee::get_queue_for_family(qf);
+class offscreen_framebuffer {
+  vee::physical_device pd;
 
   // Colour buffer
   vee::image t_img = vee::create_renderable_image({width, height});
   vee::device_memory t_mem = vee::create_local_image_memory(pd, *t_img);
-  vee::bind_image_memory(*t_img, *t_mem);
+  decltype(nullptr) t_bind = vee::bind_image_memory(*t_img, *t_mem);
   vee::image_view t_iv = vee::create_srgba_image_view(*t_img);
 
   // Depth buffer
   vee::image d_img = vee::create_depth_image({width, height});
   vee::device_memory d_mem = vee::create_local_image_memory(pd, *d_img);
-  vee::bind_image_memory(*d_img, *d_mem);
+  decltype(nullptr) d_bind = vee::bind_image_memory(*d_img, *d_mem);
   vee::image_view d_iv = vee::create_depth_image_view(*d_img);
 
   // Host-readable output buffer
   vee::buffer o_buf = vee::create_transfer_dst_buffer(width * height * 4);
   vee::device_memory o_mem = vee::create_host_buffer_memory(pd, *o_buf);
-  vee::bind_buffer_memory(*o_buf, *o_mem);
+  decltype(nullptr) o_bind = vee::bind_buffer_memory(*o_buf, *o_mem);
 
   // Renderpass + Framebuffer
   vee::render_pass rp = vee::create_render_pass(pd, nullptr);
@@ -137,6 +130,39 @@ extern "C" int main() {
       .extent = {width, height},
   };
   vee::framebuffer fb = vee::create_framebuffer(fbp);
+
+public:
+  explicit offscreen_framebuffer(vee::physical_device pd) : pd{pd} {}
+
+  [[nodiscard]] constexpr const auto render_pass() const noexcept {
+    return *rp;
+  }
+  [[nodiscard]] constexpr const auto framebuffer() const noexcept {
+    return *fb;
+  }
+
+  void cmd_copy_to_buffer(vee::command_buffer cb) {
+    vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
+    vee::cmd_copy_image_to_buffer(cb, {width, height}, *t_img, *o_buf);
+  }
+
+  void write_buffer_to_file() {
+    vee::mapmem mem{*o_mem};
+    auto *data = static_cast<stbi::pixel *>(*mem);
+    stbi::write_rgba_unsafe(filename, width, height, data);
+    silog::log(silog::info, "output written to [%s]", filename);
+  }
+};
+
+extern "C" int main() {
+  // Instance
+  vee::instance i = vee::create_instance("bait");
+  vee::debug_utils_messenger dbg = vee::create_debug_utils_messenger();
+  auto [pd, qf] = vee::find_physical_device_with_universal_queue(nullptr);
+
+  // Device
+  vee::device d = vee::create_single_queue_device(pd, qf);
+  vee::queue q = vee::get_queue_for_family(qf);
 
   // Inputs (vertices + instance)
   vee::buffer q_buf = vee::create_vertex_buffer(sizeof(all::q));
@@ -153,27 +179,23 @@ extern "C" int main() {
   icon left{icon_left, pd};
   icon right{icon_right, pd};
 
-  // Descriptor pool
+  // Descriptor set layout
   vee::descriptor_set_layout dsl = vee::create_descriptor_set_layout(
       {vee::dsl_fragment_sampler(), vee::dsl_fragment_sampler()});
 
-  vee::descriptor_pool dp =
-      vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
-  vee::descriptor_set dset = vee::allocate_descriptor_set(*dp, *dsl);
-
-  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
-  vee::update_descriptor_set(dset, 0, left.iv(), *smp);
-  vee::update_descriptor_set(dset, 1, right.iv(), *smp);
-
-  // Pipeline
+  // Generic pipeline stuff
   vee::shader_module vert =
       vee::create_shader_module_from_resource("bait.vert.spv");
   vee::shader_module frag =
       vee::create_shader_module_from_resource("bait.frag.spv");
   vee::pipeline_layout pl = vee::create_pipeline_layout(
       {*dsl}, {vee::vert_frag_push_constant_range<upc>()});
+
+  // Offscreen FB
+  offscreen_framebuffer osfb{pd};
+
   vee::gr_pipeline gp = vee::create_graphics_pipeline(
-      *pl, *rp,
+      *pl, osfb.render_pass(),
       {
           vee::pipeline_vert_stage(*vert, "main"),
           vee::pipeline_frag_stage(*frag, "main"),
@@ -186,6 +208,15 @@ extern "C" int main() {
           vee::vertex_attribute_vec2(0, 0),
           vee::vertex_attribute_vec4(1, offsetof(inst, rect)),
       });
+
+  // Descriptor pool
+  vee::descriptor_pool dp =
+      vee::create_descriptor_pool(1, {vee::combined_image_sampler(2)});
+  vee::descriptor_set dset = vee::allocate_descriptor_set(*dp, *dsl);
+
+  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
+  vee::update_descriptor_set(dset, 0, left.iv(), *smp);
+  vee::update_descriptor_set(dset, 1, right.iv(), *smp);
 
   // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
@@ -204,8 +235,8 @@ extern "C" int main() {
 
       vee::cmd_begin_render_pass({
           .command_buffer = cb,
-          .render_pass = *rp,
-          .framebuffer = *fb,
+          .render_pass = osfb.render_pass(),
+          .framebuffer = osfb.framebuffer(),
           .extent = {width, height},
           .clear_color = {{0.1, 0.2, 0.3, 1.0}},
           .use_secondary_cmd_buf = false,
@@ -222,8 +253,7 @@ extern "C" int main() {
       vee::cmd_draw(cb, 6, sizeof(all::i) / sizeof(inst));
       vee::cmd_end_render_pass(cb);
     }
-    vee::cmd_pipeline_barrier(cb, *t_img, vee::from_pipeline_to_host);
-    vee::cmd_copy_image_to_buffer(cb, {width, height}, *t_img, *o_buf);
+    osfb.cmd_copy_to_buffer(cb);
     vee::end_cmd_buf(cb);
   }
 
@@ -237,10 +267,7 @@ extern "C" int main() {
   vee::device_wait_idle();
 
   // Pull data from buffer
-  vee::mapmem mem{*o_mem};
-  auto *data = static_cast<stbi::pixel *>(*mem);
-  stbi::write_rgba_unsafe(filename, width, height, data);
-  silog::log(silog::info, "output written to [%s]", filename);
+  osfb.write_buffer_to_file();
 }
 
 #pragma leco add_shader "bait.vert"
