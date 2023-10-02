@@ -64,22 +64,22 @@ void thread::run() {
       {
         ds.cmd_prepare_images(cb);
 
-        osfb.cmd_begin_render_pass(cb);
+        sfb.cmd_begin_render_pass(cb, idx);
         vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
-        vee::cmd_push_vert_frag_constants(cb, *bpl, &osfb.push_constants());
+        vee::cmd_push_vert_frag_constants(cb, *bpl, &sfb.push_constants());
 
         vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
         vee::cmd_draw(cb, 6);
         vee::cmd_end_render_pass(cb);
       }
-      osfb.cmd_copy_to_buffer(cb);
+      // osfb.cmd_copy_to_buffer(cb);
       vee::end_cmd_buf(cb);
 
       // Submit and present
       sfb.submit_and_present(q, cb, idx);
 
       // Pull data from buffer
-      osfb.write_buffer_to_file();
+      // osfb.write_buffer_to_file();
     }
   }
 }

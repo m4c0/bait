@@ -56,7 +56,21 @@ public:
     return rp;
   }
 
-  void set_pipeline(vee::gr_pipeline &&g) { gp = traits::move(gp); }
+  void set_pipeline(vee::gr_pipeline &&g) { gp = traits::move(g); }
+
+  void cmd_begin_render_pass(vee::command_buffer cb, auto idx) {
+    vee::cmd_begin_render_pass({
+        .command_buffer = cb,
+        .render_pass = *rp,
+        .framebuffer = *fbs[idx],
+        .extent = ext,
+        .clear_color = {{0.1, 0.2, 0.3, 1.0}},
+        .use_secondary_cmd_buf = false,
+    });
+    vee::cmd_set_scissor(cb, ext);
+    vee::cmd_set_viewport(cb, ext);
+    vee::cmd_bind_gr_pipeline(cb, *gp);
+  }
 
   auto wait_reset_and_acquire() {
     vee::wait_and_reset_fence(*f);
