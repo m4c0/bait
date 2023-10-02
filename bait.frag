@@ -1,6 +1,6 @@
 #version 450
 
-layout(push_constant) uniform upc { float aspect; } pc;
+layout(push_constant) uniform upc { float aspect; float time; } pc;
 layout(set = 0, binding = 0) uniform sampler2D icon_left;
 layout(set = 0, binding = 1) uniform sampler2D icon_right;
 
@@ -100,6 +100,15 @@ float arrow(vec2 p) {
   return d;
 }
 
+float sd_guy(vec3 p) {
+  float t = fract(pc.time);
+
+  float y = 4.0 * t * (1.0 - t);
+
+  vec3 cen = vec3(0.0, y, 0.0);
+  return length(p - cen) - 0.25;
+}
+
 float map(vec3 p) {
   float d_sp = length(p) - 0.25;
 
@@ -135,7 +144,7 @@ float cast_ray(vec3 ro, vec3 rd) {
 void main() {
   vec2 p = frag_coord;
 
-  float an = 0.0;
+  float an = pc.time * 0.1;
 
   vec3 ro = vec3(1.0 * sin(an), 0.0, 1.0 * cos(an));
   vec3 ta = vec3(0.0, 0.0, 0.0);
