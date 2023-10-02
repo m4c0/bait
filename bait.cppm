@@ -6,14 +6,12 @@ import silog;
 import stubby;
 import vee;
 
-static constexpr const auto width = 1280;
-static constexpr const auto height = 768;
-static constexpr const auto filename = "out/test.jpg";
 static constexpr const auto icon_left = "photoshop.jpg";
 static constexpr const auto icon_right = "vim.png";
 
 struct upc {
   float aspect;
+  float time;
 };
 
 struct point {
@@ -101,6 +99,10 @@ public:
 };
 
 class offscreen_framebuffer {
+  static constexpr const auto width = 1280;
+  static constexpr const auto height = 768;
+  static constexpr const auto filename = "out/test.jpg";
+
   vee::physical_device pd;
 
   // Colour buffer
@@ -134,11 +136,24 @@ class offscreen_framebuffer {
 public:
   explicit offscreen_framebuffer(vee::physical_device pd) : pd{pd} {}
 
+  [[nodiscard]] constexpr const auto aspect() const noexcept {
+    return static_cast<float>(width) / static_cast<float>(height);
+  }
   [[nodiscard]] constexpr const auto render_pass() const noexcept {
     return *rp;
   }
-  [[nodiscard]] constexpr const auto framebuffer() const noexcept {
-    return *fb;
+
+  void cmd_begin_render_pass(vee::command_buffer cb) {
+    vee::cmd_begin_render_pass({
+        .command_buffer = cb,
+        .render_pass = *rp,
+        .framebuffer = *fb,
+        .extent = {width, height},
+        .clear_color = {{0.1, 0.2, 0.3, 1.0}},
+        .use_secondary_cmd_buf = false,
+    });
+    vee::cmd_set_scissor(cb, {width, height});
+    vee::cmd_set_viewport(cb, {width, height});
   }
 
   void cmd_copy_to_buffer(vee::command_buffer cb) {
@@ -225,7 +240,8 @@ extern "C" int main() {
   // Build command buffer
   {
     upc pc{
-        .aspect = static_cast<float>(width) / static_cast<float>(height),
+        .aspect = osfb.aspect(),
+        .time = 0.0,
     };
 
     vee::begin_cmd_buf_one_time_submit(cb);
@@ -233,16 +249,7 @@ extern "C" int main() {
       left.run(cb);
       right.run(cb);
 
-      vee::cmd_begin_render_pass({
-          .command_buffer = cb,
-          .render_pass = osfb.render_pass(),
-          .framebuffer = osfb.framebuffer(),
-          .extent = {width, height},
-          .clear_color = {{0.1, 0.2, 0.3, 1.0}},
-          .use_secondary_cmd_buf = false,
-      });
-      vee::cmd_set_scissor(cb, {width, height});
-      vee::cmd_set_viewport(cb, {width, height});
+      osfb.cmd_begin_render_pass(cb);
 
       vee::cmd_bind_gr_pipeline(cb, *gp);
       vee::cmd_bind_descriptor_set(cb, *pl, 0, dset);
