@@ -1,6 +1,7 @@
 export module bait:offscreen;
 import silog;
 import stubby;
+import traits;
 import vee;
 
 class offscreen_framebuffer {
@@ -37,6 +38,7 @@ class offscreen_framebuffer {
       .extent = {width, height},
   };
   vee::framebuffer fb = vee::create_framebuffer(fbp);
+  vee::gr_pipeline gp{};
 
 public:
   explicit offscreen_framebuffer(vee::physical_device pd) : pd{pd} {}
@@ -47,6 +49,8 @@ public:
   [[nodiscard]] constexpr const auto &render_pass() const noexcept {
     return rp;
   }
+
+  void set_pipeline(vee::gr_pipeline &&g) { gp = traits::move(g); }
 
   void cmd_begin_render_pass(vee::command_buffer cb) {
     vee::cmd_begin_render_pass({
@@ -59,6 +63,7 @@ public:
     });
     vee::cmd_set_scissor(cb, {width, height});
     vee::cmd_set_viewport(cb, {width, height});
+    vee::cmd_bind_gr_pipeline(cb, *gp);
   }
 
   void cmd_copy_to_buffer(vee::command_buffer cb) {
@@ -67,6 +72,9 @@ public:
   }
 
   void write_buffer_to_file() {
+    // Sync CPU+GPU
+    vee::device_wait_idle();
+
     vee::mapmem mem{*o_mem};
     auto *data = static_cast<stbi::pixel *>(*mem);
     stbi::write_rgba_unsafe(filename, width, height, data);

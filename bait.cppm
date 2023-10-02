@@ -175,8 +175,7 @@ extern "C" int main() {
   base_pipeline_layout bpl{dsl};
   // Offscreen FB
   offscreen_framebuffer osfb{pd};
-
-  vee::gr_pipeline gp = bpl.create_graphics_pipeline(osfb.render_pass());
+  osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
 
   // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
@@ -196,7 +195,6 @@ extern "C" int main() {
 
       osfb.cmd_begin_render_pass(cb);
 
-      vee::cmd_bind_gr_pipeline(cb, *gp);
       vee::cmd_bind_descriptor_set(cb, *bpl, 0, dset);
       vee::cmd_push_vert_frag_constants(cb, *bpl, &pc);
 
@@ -214,9 +212,6 @@ extern "C" int main() {
       .queue = q,
       .command_buffer = cb,
   });
-
-  // Sync CPU+GPU
-  vee::device_wait_idle();
 
   // Pull data from buffer
   osfb.write_buffer_to_file();
