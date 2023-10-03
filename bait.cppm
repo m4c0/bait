@@ -12,6 +12,7 @@ import vee;
 class thread : public sith::thread {
   casein::native_handle_t m_nptr;
   volatile bool m_resized;
+  volatile bool m_shot;
 
 public:
   void start(casein::native_handle_t n) {
@@ -19,6 +20,7 @@ public:
     sith::thread::start();
   }
   void resize() { m_resized = true; }
+  void take_shot() { m_shot = true; }
 
   void run() override;
 };
@@ -57,7 +59,6 @@ void thread::run() {
       auto idx = sfb.wait_reset_and_acquire();
 
       const auto render = [&](auto &fb) {
-        fb.cmd_begin_render_pass(cb, idx);
         vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
         vee::cmd_push_vert_frag_constants(cb, *bpl, &fb.push_constants());
 
@@ -65,6 +66,9 @@ void thread::run() {
         vee::cmd_draw(cb, 6);
         vee::cmd_end_render_pass(cb);
       };
+      // TODO: add a mutex or an atomic
+      bool shoot = m_shot;
+      m_shot = false;
 
       float time = 0.001 * watch.millis();
       osfb.push_constants().time = time;
@@ -77,16 +81,25 @@ void thread::run() {
           ds.cmd_prepare_images(cb);
           first_frame = false;
         }
+
+        sfb.cmd_begin_render_pass(cb, idx);
         render(sfb);
+
+        if (shoot) {
+          osfb.cmd_begin_render_pass(cb);
+          render(osfb);
+        }
       }
-      // osfb.cmd_copy_to_buffer(cb);
+      if (shoot)
+        osfb.cmd_copy_to_buffer(cb);
       vee::end_cmd_buf(cb);
 
       // Submit and present
       sfb.submit_and_present(q, cb, idx);
 
       // Pull data from buffer
-      // osfb.write_buffer_to_file();
+      if (shoot)
+        osfb.write_buffer_to_file();
     }
   }
 }
@@ -99,6 +112,7 @@ extern "C" void casein_handle(const casein::event &e) {
     res[casein::CREATE_WINDOW] = [](const casein::event &e) {
       t.start(*e.as<casein::events::create_window>());
     };
+    res[casein::MOUSE_DOWN] = [](auto) { t.take_shot(); };
     res[casein::RESIZE_WINDOW] = [](auto) { t.resize(); };
     res[casein::QUIT] = [](auto) { t.stop(); };
     return res;
