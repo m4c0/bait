@@ -101,6 +101,8 @@ void thread::run() {
       if (shoot)
         osfb.write_buffer_to_file();
     }
+
+    vee::device_wait_idle();
   }
 }
 
