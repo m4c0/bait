@@ -5,12 +5,23 @@ import :pipeline;
 import :quad;
 import :surface;
 import casein;
+import silog;
+import sires;
 import sith;
 import sitime;
+import traits;
 import vee;
+
+auto frag_mod() {
+  return sires::stat("bait.frag.spv").take([](auto err) {
+    silog::log(silog::error, "Failed to stat shader: %s", err);
+    return 0;
+  });
+}
 
 class thread : public sith::thread {
   casein::native_handle_t m_nptr;
+  traits::ints::uint64_t m_frag_ts;
   volatile bool m_resized;
   volatile bool m_shot;
 
@@ -40,10 +51,6 @@ void thread::run() {
 
   quad_buf q_buf{pd};
   desc_set ds{pd};
-  base_pipeline_layout bpl{ds.layout()};
-
-  offscreen_framebuffer osfb{pd};
-  osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
 
   // Command pool + buffer
   vee::command_pool cp = vee::create_command_pool(qf);
@@ -51,11 +58,17 @@ void thread::run() {
 
   bool first_frame = true;
   while (!interrupted()) {
+    base_pipeline_layout bpl{ds.layout()};
+
+    offscreen_framebuffer osfb{pd};
+    osfb.set_pipeline(bpl.create_graphics_pipeline(osfb.render_pass()));
+
     surface_framebuffer sfb{pd, s};
     sfb.set_pipeline(bpl.create_graphics_pipeline(sfb.render_pass()));
 
+    m_frag_ts = frag_mod();
     m_resized = false;
-    while (!interrupted() && !m_resized) {
+    while (!interrupted() && !m_resized && m_frag_ts == frag_mod()) {
       auto idx = sfb.wait_reset_and_acquire();
 
       const auto render = [&](auto &fb) {
