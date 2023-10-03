@@ -47,6 +47,7 @@ void thread::run() {
   vee::command_pool cp = vee::create_command_pool(qf);
   vee::command_buffer cb = vee::allocate_primary_command_buffer(*cp);
 
+  bool first_frame = true;
   while (!interrupted()) {
     surface_framebuffer sfb{pd, s};
     sfb.set_pipeline(bpl.create_graphics_pipeline(sfb.render_pass()));
@@ -55,6 +56,16 @@ void thread::run() {
     while (!interrupted() && !m_resized) {
       auto idx = sfb.wait_reset_and_acquire();
 
+      const auto render = [&](auto &fb) {
+        fb.cmd_begin_render_pass(cb, idx);
+        vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
+        vee::cmd_push_vert_frag_constants(cb, *bpl, &fb.push_constants());
+
+        vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
+        vee::cmd_draw(cb, 6);
+        vee::cmd_end_render_pass(cb);
+      };
+
       float time = 0.001 * watch.millis();
       osfb.push_constants().time = time;
       sfb.push_constants().time = time;
@@ -62,15 +73,11 @@ void thread::run() {
       // Build command buffer
       vee::begin_cmd_buf_one_time_submit(cb);
       {
-        ds.cmd_prepare_images(cb);
-
-        sfb.cmd_begin_render_pass(cb, idx);
-        vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
-        vee::cmd_push_vert_frag_constants(cb, *bpl, &sfb.push_constants());
-
-        vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
-        vee::cmd_draw(cb, 6);
-        vee::cmd_end_render_pass(cb);
+        if (first_frame) {
+          ds.cmd_prepare_images(cb);
+          first_frame = false;
+        }
+        render(sfb);
       }
       // osfb.cmd_copy_to_buffer(cb);
       vee::end_cmd_buf(cb);
