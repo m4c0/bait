@@ -100,17 +100,55 @@ float arrow(vec2 p) {
   return d;
 }
 
+float sd_elipsoid(vec3 p, vec3 rad) {
+  float k0 = length(p / rad);
+  float k1 = length(p / rad / rad);
+  return k0 * (k0 - 1.0) / k1;
+}
+float sd_sphere(vec3 p, float r) {
+  return length(p) - r;
+}
+
+float smin(float a, float b, float k) {
+  float h = max(k - abs(a - b), 0.0);
+  return min(a, b) - h * h / (k * 4.0);;
+}
+
 float sd_guy(vec3 p) {
-  float t = fract(pc.time);
+  //float t = fract(pc.time);
+  float t = 0.5;
 
   float y = 4.0 * t * (1.0 - t);
 
+  float sy = 0.5 + 0.5 * y;
+  float sz = 1.0 / sy;
+
   vec3 cen = vec3(0.0, y, 0.0);
-  return length(p - cen) - 0.25;
+  vec3 rad = vec3(0.25, 0.25 * sy, 0.25 * sz);
+
+  vec3 q = p - cen;
+
+  float d = sd_elipsoid(q, rad);
+
+  // head
+  vec3 h = q;
+  float d2 = sd_elipsoid(h - vec3(0.0, 0.28, 0.0), vec3(0.2));
+  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, 0.1), vec3(0.2));
+
+  d2 = smin(d2, d3, 0.03);
+  d = smin(d, d2, 0.1);
+
+  // eye
+  vec3 sh = vec3(abs(h.x), h.yz);
+  float d4 = sd_sphere(sh - vec3(0.08, 0.28, 0.25), 0.05);
+
+  d = min(d, d4);
+
+  return d;
 }
 
 float map(vec3 p) {
-  float d_sp = length(p) - 0.25;
+  float d_sp = sd_guy(p);
 
   float d_fl = p.y + 0.25;
 
@@ -144,16 +182,16 @@ float cast_ray(vec3 ro, vec3 rd) {
 void main() {
   vec2 p = frag_coord;
 
-  float an = pc.time * 0.1;
+  float an = pc.time * 0.0;
 
-  vec3 ro = vec3(1.0 * sin(an), 0.0, 1.0 * cos(an));
-  vec3 ta = vec3(0.0, 0.0, 0.0);
+  vec3 ta = vec3(0.0, 0.95, 0.0);
+  vec3 ro = ta + vec3(1.5 * sin(an), 0.0, 1.5 * cos(an));
 
   vec3 ww = normalize(ta - ro);
   vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
   vec3 vv = normalize(cross(uu, ww));
 
-  vec3 rd = normalize(p.x * uu + p.y * vv + 1.5 * ww);
+  vec3 rd = normalize(p.x * uu + p.y * vv + 1.8 * ww);
 
   float t = cast_ray(ro, rd);
 
