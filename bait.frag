@@ -17,7 +17,7 @@ vec2 dvf_rect(vec2 p, vec2 a, vec2 b, float th) {
 }
 
 // b = half size
-float sd_box(vec2 p, vec2 b) {
+float sd_rect(vec2 p, vec2 b) {
   vec2 d = abs(p) - b;
   return length(max(d, 0)) + min(max(d.x, d.y), 0);
 }
@@ -32,7 +32,7 @@ float sd_arc(vec2 p, float ap, float r, float th) {
 }
 float sd_rect(vec2 p, vec2 a, vec2 b, float th) {
   vec2 q = dvf_rect(p, a, b, th);
-  return sd_box(q, vec2(length(b - a) * 0.5, th));
+  return sd_rect(q, vec2(length(b - a) * 0.5, th));
 }
 float sd_x(vec2 p, float w, float r) {
   p = abs(p);
@@ -57,7 +57,7 @@ vec4 sq(vec2 p, vec2 a, vec2 b, float s, sampler2D smp) {
   float th = s;
 
   vec2 dv = dvf_rect(p, a, b, th);
-  float d = sd_box(dv, vec2(th));
+  float d = sd_rect(dv, vec2(th));
 
   vec2 uv = clamp(dv * (2.0 / (1.0+ s)) + 0.5, 0, 1);
 
@@ -100,6 +100,10 @@ float arrow(vec2 p) {
   return d;
 }
 
+float sd_box(vec3 p, vec3 b) {
+  vec3 q = abs(p) - b;
+  return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
 float sd_stick(vec3 p, vec3 a, vec3 b, float ra, float rb) {
   vec3 ba = b - a;
   vec3 pa = p - a;
@@ -126,62 +130,13 @@ float smax(float a, float b, float k) {
   return max(a, b) + h * h / (k * 4.0);
 }
 
-vec2 sd_guy(vec3 p) {
-  //float t = fract(pc.time);
-  float t = 0.5;
-
-  float y = 4.0 * t * (1.0 - t);
-
-  float sy = 0.5 + 0.5 * y;
-  float sz = 1.0 / sy;
-
-  vec3 cen = vec3(0.0, y, 0.0);
-  vec3 rad = vec3(0.25, 0.25 * sy, 0.25 * sz);
-
-  vec3 q = p - cen;
-
-  float d = sd_elipsoid(q, rad);
-
-  vec3 h = q;
-  vec3 sh = vec3(abs(h.x), h.yz);
-
-  // head
-  float d2 = sd_elipsoid(h - vec3(0.0, 0.28, 0.0), vec3(0.15, 0.2, 0.23));
-  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, -0.1), vec3(0.23, 0.2, 0.2));
-
-  d2 = smin(d2, d3, 0.05);
-  d = smin(d, d2, 0.15);
-
-  // eyebrows
-  vec3 eb = sh - vec3(0.12, 0.34, 0.15);
-  eb.xy = (mat2(3.0, 4.0, -4.0, 3.0) / 5.0) * eb.xy;
-  d2 = sd_elipsoid(eb, vec3(0.06, 0.035, 0.05));  
-  d = smin(d, d2, 0.04);
-
-  // mouth
-  d2 = sd_elipsoid(h - vec3(0.0, 0.15 + 3.0 * h.x * h.x, 0.15), vec3(0.1, 0.04, 0.2));
-  d = smax(d, -d2, 0.03);
-
-  // ears
-  d2 = sd_stick(sh, vec3(0.1, 0.4, -0.01), vec3(0.2, 0.55, 0.02), 0.01, 0.03);
-  d = smin(d, d2, 0.03);
-
-  vec2 res = vec2(d, 2.0);
-
-  // eye
-  float d4 = sd_sphere(sh - vec3(0.08, 0.28, 0.16), 0.05);
-  if (d4 < d) res = vec2(d4, 3.0);
-
-  d4 = sd_sphere(sh - vec3(0.09, 0.28, 0.18), 0.02);
-  if (d4 < d) res = vec2(d4, 4.0);
-
-  return res;
-}
-
 vec2 map(vec3 p) {
-  vec2 d1 = sd_guy(p);
+  // monolith
+  float d = sd_box(p - vec3(0.0, 1.0, 0.0), vec3(0.5, 1.0, 0.2));
+  vec2 d1 = vec2(d, 2.0);
 
-  float d2 = p.y + 0.25;
+  // ground
+  float d2 = p.y;
 
   return (d2 < d1.x) ? vec2(d2, 1.0) : d1;
 }
@@ -214,7 +169,6 @@ vec2 cast_ray(vec3 ro, vec3 rd) {
 
 float cast_shadow(vec3 ro, vec3 rd) {
   float res = 1.0;
-  return res;
 
   float t = 0.001;
   for (int i = 0; i < 100; i++) {
@@ -232,19 +186,21 @@ float cast_shadow(vec3 ro, vec3 rd) {
 void main() {
   vec2 p = frag_coord;
 
-  float an = pc.time * 1.0;
+  float ro_an = 0.5;
+  float ro_d = 2.0;
+  float ro_y = 0.3;
 
-  vec3 ta = vec3(0.0, 0.95, 0.0);
-  vec3 ro = ta + vec3(1.5 * sin(an), 0.0, 1.5 * cos(an));
+  vec3 ta = vec3(0.0, 1.0, 0.0);
+  vec3 ro = vec3(sin(ro_an), 0.0, cos(ro_an)) * ro_d + vec3(0.0, ro_y, 0.0);
 
   vec3 ww = normalize(ta - ro);
   vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
   vec3 vv = normalize(cross(uu, ww));
 
-  vec3 rd = normalize(p.x * uu + p.y * vv + 1.8 * ww);
+  vec3 rd = normalize(p.x * uu + p.y * vv + 1.6 * ww);
 
-  vec3 col = vec3(0.4, 0.75, 1.0) - 0.7 * p.y;
-  col = mix(col, vec3(0.7, 0.75, 0.8), exp(-10.0 * rd.y));
+  vec3 col = vec3(0.4, 0.75, 1.0) * 0.3 - 0.2 * p.y;
+  col = mix(col, vec3(0.9, 0.6, 0.4) * 0.5, exp(-10.0 * rd.y));
 
   vec2 tm = cast_ray(ro, rd);
   if (tm.x > 0.0) {
@@ -258,13 +214,11 @@ void main() {
       mate = vec3(0.05, 0.1, 0.02);
     } else if (tm.y < 2.5) {
       mate = vec3(0.2, 0.1, 0.02);
-    } else if (tm.y < 3.5) {
-      mate = vec3(0.4, 0.4, 0.4);
-    } else if (tm.y < 4.5) {
-      mate = vec3(0.01);
     }
 
-    vec3 sun_dir = normalize(vec3(0.8, 0.4, 0.2));
+    float sun_an = 0.0;
+
+    vec3 sun_dir = normalize(vec3(sin(sun_an), 0.2, cos(sun_an)));
     float sun_dif = clamp(dot(nor, sun_dir), 0.0, 1.0);
     float sun_shd = cast_shadow(pos + nor * 0.001, sun_dir);
 
@@ -273,8 +227,8 @@ void main() {
     float bou_dif = clamp(0.5 + 0.5 * dot(nor, vec3(0.0, -1.0, 0.0)), 0.0, 1.0);
 
     col  = mate * vec3(7.0, 4.5, 3.0) * sun_dif * sun_shd;
-    col += mate * vec3(0.5, 0.8, 0.9) * sky_dif;
-    col += mate * vec3(0.7, 0.3, 0.2) * bou_dif;
+    col += mate * vec3(0.5, 0.8, 0.9) * sky_dif * 0.5;
+    col += mate * vec3(0.7, 0.3, 0.2) * bou_dif * 0.9;
   }
 
   // It seems Bait applies this gamma somehow already
