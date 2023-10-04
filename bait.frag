@@ -111,10 +111,15 @@ float sd_sphere(vec3 p, float r) {
 
 float smin(float a, float b, float k) {
   float h = max(k - abs(a - b), 0.0);
-  return min(a, b) - h * h / (k * 4.0);;
+  return min(a, b) - h * h / (k * 4.0);
 }
 
-float sd_guy(vec3 p) {
+float smax(float a, float b, float k) {
+  float h = max(k - abs(a - b), 0.0);
+  return max(a, b) + h * h / (k * 4.0);
+}
+
+vec2 sd_guy(vec3 p) {
   //float t = fract(pc.time);
   float t = 0.5;
 
@@ -130,59 +135,93 @@ float sd_guy(vec3 p) {
 
   float d = sd_elipsoid(q, rad);
 
-  // head
   vec3 h = q;
+  vec3 sh = vec3(abs(h.x), h.yz);
+
+  // head
   float d2 = sd_elipsoid(h - vec3(0.0, 0.28, 0.0), vec3(0.2));
-  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, 0.1), vec3(0.2));
+  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, -0.1), vec3(0.2));
 
   d2 = smin(d2, d3, 0.03);
   d = smin(d, d2, 0.1);
 
+  // eyebrows
+  vec3 eb = sh - vec3(0.12, 0.34, 0.15);
+  eb.xy = (mat2(3.0, 4.0, -4.0, 3.0) / 5.0) * eb.xy;
+  d2 = sd_elipsoid(eb, vec3(0.06, 0.035, 0.05));  
+  d = smin(d, d2, 0.04);
+
+  // mouth
+  d2 = sd_elipsoid(h - vec3(0.0, 0.15, 0.15), vec3(0.1, 0.04, 0.2));
+  d = smax(d, -d2, 0.03);
+
+  vec2 res = vec2(d, 2.0);
+
   // eye
-  vec3 sh = vec3(abs(h.x), h.yz);
-  float d4 = sd_sphere(sh - vec3(0.08, 0.28, 0.25), 0.05);
+  float d4 = sd_sphere(sh - vec3(0.08, 0.28, 0.16), 0.05);
+  if (d4 < d) res = vec2(d4, 3.0);
 
-  d = min(d, d4);
+  d4 = sd_sphere(sh - vec3(0.09, 0.28, 0.18), 0.02);
+  if (d4 < d) res = vec2(d4, 4.0);
 
-  return d;
+  return res;
 }
 
-float map(vec3 p) {
-  float d_sp = sd_guy(p);
+vec2 map(vec3 p) {
+  vec2 d1 = sd_guy(p);
 
-  float d_fl = p.y + 0.25;
+  float d2 = p.y + 0.25;
 
-  return min(d_sp, d_fl);
+  return (d2 < d1.x) ? vec2(d2, 1.0) : d1;
 }
 
 vec3 norm(vec3 p) {
   vec2 e = vec2(0.0001, 0.0);
 
   return normalize(vec3(
-        map(p + e.xyy) - map(p - e.xyy),
-        map(p + e.yxy) - map(p - e.yxy),
-        map(p + e.yyx) - map(p - e.yyx)
+        map(p + e.xyy).x - map(p - e.xyy).x,
+        map(p + e.yxy).x - map(p - e.yxy).x,
+        map(p + e.yyx).x - map(p - e.yyx).x
         ));
 }
 
-float cast_ray(vec3 ro, vec3 rd) {
+vec2 cast_ray(vec3 ro, vec3 rd) {
+  float m = -1.0;
   float t = 0.0;
   for (int i = 0; i < 100; i++) {
     vec3 ray = ro + rd * t;
 
-    float dt = map(ray);
-    if (dt < 0.001) break;
+    vec2 h = map(ray);
+    m = h.y;
+    if (h.x < 0.001) break;
     
-    t += dt;
-    if (t > 20.0) return -1.0;
+    t += h.x;
+    if (t > 20.0) return vec2(-1.0);
   }
-  return t;
+  return vec2(t, m);
+}
+
+float cast_shadow(vec3 ro, vec3 rd) {
+  float res = 1.0;
+  return res;
+
+  float t = 0.001;
+  for (int i = 0; i < 100; i++) {
+    vec3 pos = ro + rd * t;
+    float h = map(pos).x;
+    res = min(res, 16.0 * h.x / t);
+    if (res < 0.001) break;
+    t += h;
+    if (t > 20.0) break;
+  }
+
+  return clamp(res, 0.0, 1.0);
 }
 
 void main() {
   vec2 p = frag_coord;
 
-  float an = pc.time * 0.0;
+  float an = pc.time * 1.0;
 
   vec3 ta = vec3(0.0, 0.95, 0.0);
   vec3 ro = ta + vec3(1.5 * sin(an), 0.0, 1.5 * cos(an));
@@ -193,20 +232,30 @@ void main() {
 
   vec3 rd = normalize(p.x * uu + p.y * vv + 1.8 * ww);
 
-  float t = cast_ray(ro, rd);
-
   vec3 col = vec3(0.4, 0.75, 1.0) - 0.7 * p.y;
   col = mix(col, vec3(0.7, 0.75, 0.8), exp(-10.0 * rd.y));
 
-  if (t > 0.0) {
+  vec2 tm = cast_ray(ro, rd);
+  if (tm.x > 0.0) {
+    float t = tm.x;
     vec3 pos = ro + rd * t;
     vec3 nor = norm(pos);
 
     vec3 mate = vec3(0.18);
 
+    if (tm.y < 1.5) {
+      mate = vec3(0.05, 0.1, 0.02);
+    } else if (tm.y < 2.5) {
+      mate = vec3(0.2, 0.1, 0.02);
+    } else if (tm.y < 3.5) {
+      mate = vec3(0.4, 0.4, 0.4);
+    } else if (tm.y < 4.5) {
+      mate = vec3(0.01);
+    }
+
     vec3 sun_dir = normalize(vec3(0.8, 0.4, 0.2));
     float sun_dif = clamp(dot(nor, sun_dir), 0.0, 1.0);
-    float sun_shd = step(cast_ray(pos + nor * 0.001, sun_dir), 0.0);
+    float sun_shd = cast_shadow(pos + nor * 0.001, sun_dir);
 
     float sky_dif = clamp(0.5 + 0.5 * dot(nor, vec3(0.0, 1.0, 0.0)), 0.0, 1.0);
 
