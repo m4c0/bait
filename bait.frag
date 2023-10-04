@@ -100,6 +100,13 @@ float arrow(vec2 p) {
   return d;
 }
 
+float sd_stick(vec3 p, vec3 a, vec3 b, float ra, float rb) {
+  vec3 ba = b - a;
+  vec3 pa = p - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  float r = mix(ra, rb, h);
+  return length(pa - h * ba) - r;
+}
 float sd_elipsoid(vec3 p, vec3 rad) {
   float k0 = length(p / rad);
   float k1 = length(p / rad / rad);
@@ -139,11 +146,11 @@ vec2 sd_guy(vec3 p) {
   vec3 sh = vec3(abs(h.x), h.yz);
 
   // head
-  float d2 = sd_elipsoid(h - vec3(0.0, 0.28, 0.0), vec3(0.2));
-  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, -0.1), vec3(0.2));
+  float d2 = sd_elipsoid(h - vec3(0.0, 0.28, 0.0), vec3(0.15, 0.2, 0.23));
+  float d3 = sd_elipsoid(h - vec3(0.0, 0.28, -0.1), vec3(0.23, 0.2, 0.2));
 
-  d2 = smin(d2, d3, 0.03);
-  d = smin(d, d2, 0.1);
+  d2 = smin(d2, d3, 0.05);
+  d = smin(d, d2, 0.15);
 
   // eyebrows
   vec3 eb = sh - vec3(0.12, 0.34, 0.15);
@@ -152,8 +159,12 @@ vec2 sd_guy(vec3 p) {
   d = smin(d, d2, 0.04);
 
   // mouth
-  d2 = sd_elipsoid(h - vec3(0.0, 0.15, 0.15), vec3(0.1, 0.04, 0.2));
+  d2 = sd_elipsoid(h - vec3(0.0, 0.15 + 3.0 * h.x * h.x, 0.15), vec3(0.1, 0.04, 0.2));
   d = smax(d, -d2, 0.03);
+
+  // ears
+  d2 = sd_stick(sh, vec3(0.1, 0.4, -0.01), vec3(0.2, 0.55, 0.02), 0.01, 0.03);
+  d = smin(d, d2, 0.03);
 
   vec2 res = vec2(d, 2.0);
 
