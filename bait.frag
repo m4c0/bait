@@ -183,6 +183,18 @@ float cast_shadow(vec3 ro, vec3 rd) {
   return clamp(res, 0.0, 1.0);
 }
 
+float calc_ao(vec3 p, vec3 n) {
+  float eps = 0.1;
+  float res = 0.0;
+  float w = 0.5;
+  for (int i = 1; i < 5; i++) {
+    float d = eps * float(i);
+    res += w * (1.0 - (d - map(p + d * n).x));
+    w *= 0.5;
+  }
+  return res;
+}
+
 void main() {
   vec2 p = frag_coord;
 
@@ -218,6 +230,8 @@ void main() {
 
     float sun_an = 0.0;
 
+    float ao = calc_ao(pos, nor);
+
     vec3 sun_dir = normalize(vec3(sin(sun_an), 0.2, cos(sun_an)));
     float sun_dif = clamp(dot(nor, sun_dir), 0.0, 1.0);
     float sun_shd = cast_shadow(pos + nor * 0.001, sun_dir);
@@ -229,6 +243,7 @@ void main() {
     col  = mate * vec3(7.0, 4.5, 3.0) * sun_dif * sun_shd;
     col += mate * vec3(0.5, 0.8, 0.9) * sky_dif * 0.5;
     col += mate * vec3(0.7, 0.3, 0.2) * bou_dif * 0.9;
+    col *= ao;
   }
 
   // It seems Bait applies this gamma somehow already
