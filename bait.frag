@@ -213,7 +213,7 @@ void main() {
     if (tm.y < 1.5) {
       mate = vec3(0.05, 0.1, 0.02);
     } else if (tm.y < 2.5) {
-      mate = vec3(0.2, 0.1, 0.02);
+      mate = vec3(0.01, 0.01, 0.02);
     }
 
     float sun_an = 0.0;
