@@ -132,7 +132,7 @@ float smax(float a, float b, float k) {
 
 vec2 map(vec3 p) {
   // monolith
-  float d = sd_box(p - vec3(0.0, 1.0, 0.0), vec3(0.5, 1.0, 0.2));
+  float d = sd_box(p - vec3(0.0, 1.0, 0.0), vec3(0.5, 1.0, 0.2)) - 0.05;
   vec2 d1 = vec2(d, 2.0);
 
   // ground
@@ -220,11 +220,11 @@ void main() {
     vec3 pos = ro + rd * t;
     vec3 nor = norm(pos);
 
-    float sun_an = 0.0;
+    float sun_an = -1.0;
 
     float ao = calc_ao(pos, nor);
 
-    vec3 sun_dir = normalize(vec3(sin(sun_an), 0.2, cos(sun_an)));
+    vec3 sun_dir = normalize(vec3(sin(sun_an), 0.9, cos(sun_an)));
     float sun_dif = clamp(dot(nor, sun_dir), 0.0, 1.0);
     float sun_shd = cast_shadow(pos + nor * 0.001, sun_dir);
     float sun_spc = 0.0;
@@ -236,7 +236,7 @@ void main() {
     vec3 mate = vec3(0.18);
 
     if (tm.y < 1.5) {
-      mate = vec3(0.05, 0.1, 0.02);
+      mate = vec3(0.01, 0.03, 0.01);
     } else if (tm.y < 2.5) {
       mate = vec3(0.01, 0.01, 0.02);
 
