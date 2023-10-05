@@ -220,14 +220,6 @@ void main() {
     vec3 pos = ro + rd * t;
     vec3 nor = norm(pos);
 
-    vec3 mate = vec3(0.18);
-
-    if (tm.y < 1.5) {
-      mate = vec3(0.05, 0.1, 0.02);
-    } else if (tm.y < 2.5) {
-      mate = vec3(0.01, 0.01, 0.02);
-    }
-
     float sun_an = 0.0;
 
     float ao = calc_ao(pos, nor);
@@ -240,6 +232,23 @@ void main() {
 
     float bou_dif = clamp(0.5 + 0.5 * dot(nor, vec3(0.0, -1.0, 0.0)), 0.0, 1.0);
 
+    vec3 mate = vec3(0.18);
+    float spec = 0.0;
+
+    if (tm.y < 1.5) {
+      mate = vec3(0.05, 0.1, 0.02);
+    } else if (tm.y < 2.5) {
+      mate = vec3(0.01, 0.01, 0.02);
+
+      // https://en.wikipedia.org/wiki/Blinn–Phong_reflection_model
+      vec3 l = sun_dir;
+      vec3 v = -rd;
+      vec3 h = normalize(l + v);
+      spec = pow(max(dot(h, nor), 0.0), 16.0);
+    }
+
+    // https://en.wikipedia.org/wiki/Phong_reflection_model
+    //     -----------------------imd   ----L.N   -----kd
     col  = mate * vec3(7.0, 4.5, 3.0) * sun_dif * sun_shd;
     col += mate * vec3(0.5, 0.8, 0.9) * sky_dif * 0.5;
     col += mate * vec3(0.7, 0.3, 0.2) * bou_dif * 0.9;
