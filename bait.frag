@@ -144,7 +144,8 @@ float atan2(vec2 p) {
 }
 
 vec3 lens_flare(vec2 p) {
-  vec2 q = p - vec2(-0.35, 0.6);
+  vec2 qp = vec2(-0.35, 0.6);
+  vec2 q = p - qp;
   float an = atan2(q);
 
   float d1 = sd_circle(q, 0.0);
@@ -154,10 +155,32 @@ vec3 lens_flare(vec2 p) {
   float d1b = d1a * 1.1 * pow(abs(sin(an * 100.0)), 1.0 + cos(an * 10.0));
   float d = mix(d1a, d1b, step(0.0, length(q) - 3.14/2.0));
 
-  //float d2 = max(0.0, sd_annulus(q, 0.3, 0.02));
-  //d += 0.3 * smoothstep(0.0, 0.6, 0.03 / pow(d2, 1.5));
-  //d += 0.04 / d2;
-  return vec3(2.7, 2.5, 2.3) * pow(d, 3.5);
+  float l = length(q);
+
+  vec3 c0 = vec3(2.7, 2.5, 1.3);
+  vec3 c1 = vec3(1.0, 0.7, 0.5);
+
+  vec3 c = c0 * pow(d, 3.5);
+  c += c1;
+  c *= 1.0 - pow(smoothstep(0.0, 1.0, l), 0.4);
+  c *= abs(sin(an * 120.0) * 0.05 + 1.0);
+
+  // Smaller circles
+  d = sd_circle(p - qp * 0.3, 0.1);
+  d = min(d, sd_circle(p + qp * 0.3, 0.1));
+  c += c1 * step(0.0, -d) * 0.03; 
+
+  // Mid circles with colour
+  d = sd_circle(p - qp * 0.5, 0.3);
+  d = min(d, sd_circle(p + qp * 0.5, 0.3));
+  c += c1 * step(0.0, -d) * 0.01;
+
+  // Final circle
+  d = sd_circle(p + qp, 0.3);
+  c += c1 * max(0.0, -d) * 0.3;
+  c += c1 * 0.01 / smoothstep(0.0, 0.002, abs(d));
+
+  return c;
 }
 
 vec2 map(vec3 p) {
