@@ -22,6 +22,14 @@ float sd_rect(vec2 p, vec2 b) {
   return length(max(d, 0)) + min(max(d.x, d.y), 0);
 }
 
+float sd_circle(vec2 p, float r) {
+  return length(p) - r;
+}
+
+float sd_annulus(vec2 p, float r, float th) {
+  return abs(length(p) - r) - th;
+}
+
 float sd_arc(vec2 p, float ap, float r, float th) {
   float s = sin(ap);
   float c = cos(ap);
@@ -128,6 +136,16 @@ float smin(float a, float b, float k) {
 float smax(float a, float b, float k) {
   float h = max(k - abs(a - b), 0.0);
   return max(a, b) + h * h / (k * 4.0);
+}
+
+float lens_flare(vec2 p) {
+  vec2 q = p - vec2(-0.35, 0.6);
+  float d = sd_circle(q, 0.0);
+  float d2 = max(0.0, sd_annulus(q, 0.3, 0.02));
+  d = max(1.0 - pow(sin(min(d, 3.1415 / 2.0)), 0.6), 0);
+  //d += 0.3 * smoothstep(0.0, 0.6, 0.03 / pow(d2, 1.5));
+  //d += 0.04 / d2;
+  return d;
 }
 
 vec2 map(vec3 p) {
@@ -241,7 +259,7 @@ void main() {
       mate = vec3(0.01, 0.01, 0.02);
 
       vec3 r = 2 * dot(sun_dir, nor) * nor - sun_dir;
-      sun_spc = max(0.0, pow(dot(r, -rd), 20.0));
+      sun_spc = max(0.0, pow(dot(r, -rd), 50.0)) * 0.1;
     }
 
     // https://en.wikipedia.org/wiki/Phong_reflection_model
@@ -252,6 +270,9 @@ void main() {
     col += mate * vec3(0.7, 0.3, 0.2) * bou_dif * 0.9;
     col *= ao;
   }
+
+  float lf = lens_flare(p);
+  col += vec3(lf);
 
   // It seems Bait applies this gamma somehow already
   // col = pow(col, vec3(0.4545));
