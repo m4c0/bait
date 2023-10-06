@@ -3,7 +3,7 @@ import silog;
 import stubby;
 import vee;
 
-static constexpr const auto icon_left = "photoshop.jpg";
+static constexpr const auto icon_left = "kneel.png";
 static constexpr const auto icon_right = "vim.png";
 
 class icon {

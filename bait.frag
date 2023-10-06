@@ -308,6 +308,10 @@ void main() {
 
   col += lens_flare(p);
 
+  vec2 tp = -p * vec2(1.5, 1.0) + vec2(-0.9, 0.1);
+  vec4 img = texture(icon_left, clamp(tp, 0.0, 1.0));
+  col = mix(col, img.rgb, img.a);
+
   // It seems Bait applies this gamma somehow already
   // col = pow(col, vec3(0.4545));
 
