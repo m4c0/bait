@@ -144,7 +144,7 @@ float atan2(vec2 p) {
 }
 
 vec3 lens_flare(vec2 p) {
-  vec2 qp = vec2(-0.35, 0.6);
+  vec2 qp = vec2(0.1, 0.8);
   vec2 q = p - qp;
   float an = atan2(q);
 
@@ -185,7 +185,7 @@ vec3 lens_flare(vec2 p) {
 
 vec2 map(vec3 p) {
   // monolith
-  float d = sd_box(p - vec3(0.0, 1.0, 0.0), vec3(0.5, 1.0, 0.2)) - 0.05;
+  float d = sd_box(p - vec3(0.7, 1.0, 0.0), vec3(0.5, 1.0, 0.2)) - 0.05;
   vec2 d1 = vec2(d, 2.0);
 
   // ground
@@ -307,6 +307,10 @@ void main() {
   }
 
   col += lens_flare(p);
+
+  float dp = sd_rect(p + vec2(0.95, 0.8), vec2(0.15, 0.01)) - 0.05;
+  float ds = smoothstep(0.0, 0.2, dp) * 0.8 + 0.2;
+  col *= ds;
 
   vec2 tp = -p * vec2(1.5, 1.0) + vec2(-0.9, 0.1);
   vec4 img = texture(icon_left, clamp(tp, 0.0, 1.0));
