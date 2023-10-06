@@ -138,14 +138,26 @@ float smax(float a, float b, float k) {
   return max(a, b) + h * h / (k * 4.0);
 }
 
-float lens_flare(vec2 p) {
+float atan2(vec2 p) {
+  vec2 n = normalize(p);
+  return n.y >= 0 ? acos(n.x) : -acos(n.x);
+}
+
+vec3 lens_flare(vec2 p) {
   vec2 q = p - vec2(-0.35, 0.6);
-  float d = sd_circle(q, 0.0);
-  float d2 = max(0.0, sd_annulus(q, 0.3, 0.02));
-  d = max(1.0 - pow(sin(min(d, 3.1415 / 2.0)), 0.6), 0);
+  float an = atan2(q);
+
+  float d1 = sd_circle(q, 0.0);
+
+  float d1a = max(1.0 - pow(sin(d1), 0.6), 0);
+  d1a *= abs(sin(an * 50.0) * 0.01 + 0.9);
+  float d1b = d1a * 1.1 * pow(abs(sin(an * 100.0)), 1.0 + cos(an * 10.0));
+  float d = mix(d1a, d1b, step(0.0, length(q) - 3.14/2.0));
+
+  //float d2 = max(0.0, sd_annulus(q, 0.3, 0.02));
   //d += 0.3 * smoothstep(0.0, 0.6, 0.03 / pow(d2, 1.5));
   //d += 0.04 / d2;
-  return d;
+  return vec3(2.7, 2.5, 2.3) * pow(d, 3.5);
 }
 
 vec2 map(vec3 p) {
@@ -259,7 +271,7 @@ void main() {
       mate = vec3(0.01, 0.01, 0.02);
 
       vec3 r = 2 * dot(sun_dir, nor) * nor - sun_dir;
-      sun_spc = max(0.0, pow(dot(r, -rd), 50.0)) * 0.1;
+      sun_spc = max(0.0, pow(dot(r, -rd), 30.0)) * 0.1;
     }
 
     // https://en.wikipedia.org/wiki/Phong_reflection_model
@@ -271,8 +283,7 @@ void main() {
     col *= ao;
   }
 
-  float lf = lens_flare(p);
-  col += vec3(lf);
+  col += lens_flare(p);
 
   // It seems Bait applies this gamma somehow already
   // col = pow(col, vec3(0.4545));
