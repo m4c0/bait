@@ -316,6 +316,8 @@ void main() {
   vec4 img = texture(icon_left, clamp(tp, 0.0, 1.0));
   col = mix(col, img.rgb, img.a);
 
+  col += vec3(1.0, 0.0, 0.0) * arrow(p + vec2(0.2, -0.2));
+
   // It seems Bait applies this gamma somehow already
   // col = pow(col, vec3(0.4545));
 
