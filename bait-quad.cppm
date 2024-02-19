@@ -1,5 +1,6 @@
 export module bait:quad;
 import vee;
+import voo;
 
 struct point {
   float x;
@@ -24,7 +25,7 @@ class quad_buf {
 public:
   explicit quad_buf(vee::physical_device pd) : pd{pd} {
     vee::bind_buffer_memory(*q_buf, *q_mem, 0);
-    vee::mapmem mem{*q_mem};
+    voo::mapmem mem{*q_mem};
     *static_cast<quad *>(*mem) = {};
   }
 

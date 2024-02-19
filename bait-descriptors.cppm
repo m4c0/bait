@@ -2,6 +2,7 @@ export module bait:descriptors;
 import silog;
 import stubby;
 import vee;
+import voo;
 
 static constexpr const auto icon_left = "kneel.png";
 static constexpr const auto icon_right = "vim.png";
@@ -33,7 +34,7 @@ public:
           vee::bind_image_memory(*m_img, *m_mem);
           m_iv = vee::create_srgba_image_view(*m_img);
 
-          vee::mapmem m{*m_smem};
+          voo::mapmem m{*m_smem};
           auto *c = static_cast<unsigned char *>(*m);
           for (auto i = 0; i < m_w * m_h * 4; i++) {
             c[i] = (*img.data)[i];

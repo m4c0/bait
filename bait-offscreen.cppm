@@ -4,6 +4,7 @@ import silog;
 import stubby;
 import traits;
 import vee;
+import voo;
 
 class offscreen_framebuffer {
   static constexpr const auto width = 1280;
@@ -78,7 +79,7 @@ public:
     // Sync CPU+GPU
     vee::device_wait_idle();
 
-    vee::mapmem mem{*o_mem};
+    voo::mapmem mem{*o_mem};
     auto *data = static_cast<stbi::pixel *>(*mem);
     stbi::write_rgba_unsafe(filename, width, height, data);
     silog::log(silog::info, "output written to [%s]", filename);

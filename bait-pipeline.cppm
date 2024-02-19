@@ -24,17 +24,19 @@ public:
   [[nodiscard]] auto operator*() const noexcept { return *pl; }
 
   [[nodiscard]] auto create_graphics_pipeline(const vee::render_pass &rp) {
-    return vee::create_graphics_pipeline(
-        *pl, *rp,
-        {
+    return vee::create_graphics_pipeline({
+        .pipeline_layout = *pl,
+        .render_pass = *rp,
+        .shaders{
             vee::pipeline_vert_stage(*vert, "main"),
             vee::pipeline_frag_stage(*frag, "main"),
         },
-        {
+        .bindings{
             vee::vertex_input_bind(sizeof(float) * 2),
         },
-        {
+        .attributes{
             vee::vertex_attribute_vec2(0, 0),
-        });
+        },
+    });
   }
 };
