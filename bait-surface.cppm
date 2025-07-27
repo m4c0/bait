@@ -38,6 +38,8 @@ public:
     return rp;
   }
 
+  [[nodiscard]] constexpr auto cb() const { return sw.command_buffer(); }
+
   void set_pipeline(vee::gr_pipeline &&g) { gp = traits::move(g); }
 
   void cmd_begin_render_pass(vee::command_buffer cb) {

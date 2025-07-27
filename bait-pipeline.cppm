@@ -20,10 +20,10 @@ public:
 
   [[nodiscard]] auto operator*() const noexcept { return *pl; }
 
-  [[nodiscard]] auto create_graphics_pipeline(const vee::render_pass &rp) {
+  [[nodiscard]] auto create_graphics_pipeline(const vee::render_pass::type rp) {
     return vee::create_graphics_pipeline({
         .pipeline_layout = *pl,
-        .render_pass = *rp,
+        .render_pass = rp,
         .shaders{
             voo::shader { "bait.vert.spv" }.pipeline_vert_stage(),
             voo::shader { "bait.frag.spv" }.pipeline_frag_stage(),
