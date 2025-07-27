@@ -72,7 +72,8 @@ vec4 sq(vec2 p, vec2 a, vec2 b, float s, sampler2D smp) {
   vec2 dv = dvf_rect(p, a, b, th);
   float d = sd_rect(dv, vec2(th));
 
-  vec2 uv = clamp(dv * (2.0 / (1.0+ s)) + 0.5, 0, 1);
+  vec2 uv = clamp(dv * (2.0 / (1.0 + s)) + 0.5, 0, 1);
+  uv.y *= -1;
 
   vec4 smp_c = texture(smp, uv);
 
