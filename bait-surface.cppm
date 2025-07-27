@@ -16,17 +16,14 @@ public:
     rp { vee::create_render_pass({
       .attachments {{
         vee::create_colour_attachment(dq.physical_device(), dq.surface()),
-        vee::create_depth_attachment(),
       }},
       .subpasses {{
         vee::create_subpass({
           .colours {{ vee::create_attachment_ref(0, vee::image_layout_color_attachment_optimal) }},
-          .depth_stencil = vee::create_attachment_ref(1, vee::image_layout_depth_stencil_attachment_optimal),
         }),
       }},
       .dependencies {{
         vee::create_colour_dependency(),
-        vee::create_depth_dependency(),
       }},
     }) }
   , sw { dq, *rp }
