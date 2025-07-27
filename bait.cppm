@@ -1,3 +1,7 @@
+#pragma leco add_shader "bait.vert"
+#pragma leco add_shader "bait.frag"
+#pragma leco tool
+
 export module bait;
 import :descriptors;
 import :offscreen;
@@ -135,7 +139,3 @@ extern "C" void casein_handle(const casein::event &e) {
 
   map.handle(e);
 }
-
-#pragma leco add_shader "bait.vert"
-#pragma leco add_shader "bait.frag"
-#pragma leco tool
