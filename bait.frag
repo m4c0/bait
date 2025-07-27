@@ -22,6 +22,11 @@ float sd_rect(vec2 p, vec2 b) {
   return length(max(d, 0)) + min(max(d.x, d.y), 0);
 }
 
+float sd_box(vec2 p, vec2 b) {
+  vec2 d = abs(p) - b;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+} 
+
 float sd_circle(vec2 p, float r) {
   return length(p) - r;
 }
@@ -248,7 +253,7 @@ float calc_ao(vec3 p, vec3 n) {
   return res;
 }
 
-void main() {
+void kneel() {
   vec2 p = frag_coord;
 
   float ro_an = 0.5;
@@ -322,4 +327,22 @@ void main() {
   // col = pow(col, vec3(0.4545));
 
   frag_colour = vec4(col, 1);
+}
+
+void main() {
+  vec4 sl = sq(frag_coord, vec2(-0.9, -0.2), vec2(0.6, 0.1), 0.25, icon_left);
+  vec4 sr = sq(frag_coord, vec2(0.3, 0.1), vec2(0.6, -0.1), 0.4, icon_right);
+
+  float x = sd_x(frag_coord + vec2(0.78, 0.18), 0.6, 0.002);
+  x = 0.002 / abs(x);
+
+  float arr = arrow(frag_coord + vec2(0.0, 0.07));
+
+  float box = sd_box(frag_coord, vec2(pc.aspect, 1.0));
+  box = -box * 15.0 + 3.0;
+  box = smoothstep(box, -2.0, 2.2);
+
+  vec3 m = pow(sr.xyz, vec3(0.4)) + vec3(arr + x, 0, 0) + sl.xyz * 0.2;
+
+  frag_colour = vec4(m * box, 1);
 }

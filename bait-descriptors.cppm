@@ -3,8 +3,8 @@ import jute;
 import vee;
 import voo;
 
-static constexpr const jute::view icon_left = "kneel.png";
-static constexpr const jute::view icon_right = "vim.png";
+static constexpr const jute::view icon_left = "cpp.png";
+static constexpr const jute::view icon_right = "lambda.png";
 
 class desc_set {
   // Textures
