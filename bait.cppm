@@ -6,7 +6,6 @@ export module bait;
 import :descriptors;
 import :offscreen;
 import :pipeline;
-import :quad;
 import :surface;
 import casein;
 import silog;
@@ -53,7 +52,7 @@ void thread::run() {
   vee::device d = vee::create_single_queue_device(pd, qf);
   vee::queue q = vee::get_queue_for_family(qf);
 
-  quad_buf q_buf{pd};
+  voo::one_quad q_buf { pd };
   desc_set ds{pd};
 
   // Command pool + buffer
@@ -79,8 +78,7 @@ void thread::run() {
         vee::cmd_bind_descriptor_set(cb, *bpl, 0, *ds);
         vee::cmd_push_vert_frag_constants(cb, *bpl, &fb.push_constants());
 
-        vee::cmd_bind_vertex_buffers(cb, 0, *q_buf);
-        vee::cmd_draw(cb, 6);
+        q_buf.run(cb, 0);
         vee::cmd_end_render_pass(cb);
       };
       // TODO: add a mutex or an atomic
