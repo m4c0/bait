@@ -18,7 +18,11 @@ struct app_stuff {
   voo::device_and_queue dq { "bait", casein::native_ptr };
   vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
 
-  vee::pipeline_layout pl = vee::create_pipeline_layout(vee::vertex_push_constant_range<upc>());
+  voo::single_frag_dset dset { 1 };
+
+  vee::pipeline_layout pl = vee::create_pipeline_layout(
+      dset.descriptor_set_layout(),
+      vee::vertex_push_constant_range<upc>());
   vee::gr_pipeline gp = vee::create_graphics_pipeline({
     .pipeline_layout = *pl,
     .render_pass = *rp,
@@ -34,7 +38,11 @@ struct app_stuff {
     },
   });
 
+  vee::sampler smp = vee::create_sampler(vee::linear_sampler);
+
   voo::one_quad quad { dq.physical_device() };
+
+  voo::bound_image img;
 } * gas;
 
 struct sized_stuff {
@@ -43,6 +51,10 @@ struct sized_stuff {
 
 static void on_start() {
   gas = new app_stuff {};
+
+  voo::load_image("beach.png", gas->dq.physical_device(), gas->dq.queue(), &gas->img, [] {
+    vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->img.iv, *gas->smp);
+  });
 }
 static void on_frame() {
   if (!gss) gss = new sized_stuff {};
@@ -52,9 +64,9 @@ static void on_frame() {
     auto cb = gss->sw.command_buffer();
 
     upc pc {
-      .aa { -0.8f },
-      .bb { 0.6f },
-      .scale { 2 },
+      .aa { -1.f },
+      .bb { 1.0f },
+      .scale { 1 },
     };
 
     auto rp = gss->sw.cmd_render_pass({
@@ -63,6 +75,7 @@ static void on_frame() {
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
   });
