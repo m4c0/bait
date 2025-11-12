@@ -7,11 +7,17 @@ import dotz;
 import voo;
 import vinyl;
 
+struct upc {
+  dotz::vec2 aa;
+  dotz::vec2 bb;
+  dotz::vec2 scale;
+};
+
 struct app_stuff {
   voo::device_and_queue dq { "bait", casein::native_ptr };
   vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
 
-  vee::pipeline_layout pl = vee::create_pipeline_layout();
+  vee::pipeline_layout pl = vee::create_pipeline_layout(vee::vertex_push_constant_range<upc>());
   vee::gr_pipeline gp = vee::create_graphics_pipeline({
     .pipeline_layout = *pl,
     .render_pass = *rp,
@@ -44,11 +50,18 @@ static void on_frame() {
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
     auto cb = gss->sw.command_buffer();
 
+    upc pc {
+      .aa { -0.8f },
+      .bb { 0.6f },
+      .scale { 2 },
+    };
+
     auto rp = gss->sw.cmd_render_pass({
       .command_buffer = gss->sw.command_buffer(),
     });
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
   });
