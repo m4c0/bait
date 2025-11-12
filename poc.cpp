@@ -6,9 +6,11 @@ import vinyl;
 
 struct app_stuff {
   voo::device_and_queue dq { "bait", casein::native_ptr };
+  vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
 } * gas;
 
 struct sized_stuff {
+  voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
 } * gss;
 
 static void on_start() {
