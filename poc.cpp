@@ -5,6 +5,7 @@
 
 import casein;
 import dotz;
+import natty;
 import voo;
 import vinyl;
 
@@ -19,6 +20,7 @@ struct app_stuff {
   vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
 
   voo::single_frag_dset dset { 1 };
+  voo::single_frag_dset dset_text { 1 };
 
   vee::pipeline_layout pl = vee::create_pipeline_layout(
       dset.descriptor_set_layout(),
@@ -42,7 +44,17 @@ struct app_stuff {
 
   voo::one_quad quad { dq.physical_device() };
 
-  voo::bound_image img;
+  voo::bound_image back;
+  voo::h2l_image text {{
+    .pd = dq.physical_device(),
+    .w = 2048,
+    .h = 1024,
+    .fmt = VK_FORMAT_R8G8B8A8_SRGB,
+  }}; 
+
+  natty::font_t text_font_title = natty::create_font("Cascadia Mono", 96);
+  natty::font_t text_font = natty::create_font("Times", 72);
+  natty::surface_t text_surf = natty::create_surface(text.width(), text.height());
 } * gas;
 
 struct sized_stuff {
@@ -52,9 +64,25 @@ struct sized_stuff {
 static void on_start() {
   gas = new app_stuff {};
 
-  voo::load_image("beach.png", gas->dq.physical_device(), gas->dq.queue(), &gas->img, [] {
-    vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->img.iv, *gas->smp);
+  voo::load_image("beach.png", gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
+    vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
   });
+
+  {
+    natty::draw({
+      .surface = *gas->text_surf,
+      .font = *gas->text_font_title,
+      .position { 100, 100 },
+      .text = "Testing",
+    });
+
+    voo::memiter<unsigned> pixies { gas->text.host_memory() };
+    auto ptr = natty::surface_data(*gas->text_surf).begin();
+    for (auto i = 0; i < gas->text.width() * gas->text.height(); i++) {
+      pixies += *ptr++;
+    }
+  }
+  vee::update_descriptor_set(gas->dset_text.descriptor_set(), 0, 0, gas->text.iv(), *gas->smp);
 }
 static void on_frame() {
   if (!gss) gss = new sized_stuff {};
@@ -62,6 +90,7 @@ static void on_frame() {
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
     auto cb = gss->sw.command_buffer();
+    gas->text.setup_copy(gss->sw.command_buffer());
 
     upc pc {
       .aa { -1.f },
@@ -76,6 +105,16 @@ static void on_frame() {
     vee::cmd_set_scissor(cb, gss->sw.extent());
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
+    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+    gas->quad.run(cb, 0);
+
+    pc = {
+      .aa { -1.f },
+      .bb { 1.0f },
+      .scale { 2 },
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
   });
