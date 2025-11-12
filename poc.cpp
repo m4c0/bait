@@ -1,6 +1,7 @@
 #pragma leco app
 #pragma leco add_shader "poc.frag"
 #pragma leco add_shader "poc.vert"
+#pragma leco add_resource_dir assets
 
 import casein;
 import dotz;
