@@ -58,8 +58,6 @@ struct app_stuff {
     .h = 16,
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
-
-  natty::font_t text_font = natty::create_font("DIN Condensed", 128);
 } * gas;
 
 struct sized_stuff {
@@ -75,17 +73,27 @@ static void on_start() {
 
   {
     natty::surface_t surf = natty::create_surface(gas->text.width(), gas->text.height());
+
+    natty::font_t font = natty::create_font("DIN Condensed", 128);
     natty::draw({
       .surface = *surf,
-      .font = *gas->text_font,
+      .font = *font,
       .position { 100, 100 },
       .text = "Programando",
     });
     natty::draw({
       .surface = *surf,
-      .font = *gas->text_font,
+      .font = *font,
       .position { 100, 250 },
       .text = "nas férias",
+    });
+
+    font = natty::create_font("Futura", 48);
+    natty::draw({
+      .surface = *surf,
+      .font = *font,
+      .position { 540, 420 },
+      .text = "com m4c0",
     });
 
     voo::memiter<unsigned> pixies { gas->text.host_memory() };
@@ -128,8 +136,8 @@ static void on_frame() {
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -25.f, -3.f },
-      .bb { 0.f, 3.0f },
+      .aa { -25.f, -4.f },
+      .bb { 0.f, 4.0f },
       .scale { 10.0f * gss->sw.aspect(), 10.0f },
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
