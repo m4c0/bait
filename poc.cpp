@@ -59,8 +59,7 @@ struct app_stuff {
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
 
-  natty::font_t text_font_title = natty::create_font("Cascadia Mono", 128);
-  natty::font_t text_font = natty::create_font("Times", 72);
+  natty::font_t text_font = natty::create_font("DIN Condensed", 128);
   natty::surface_t text_surf = natty::create_surface(text.width(), text.height());
 } * gas;
 
@@ -78,9 +77,15 @@ static void on_start() {
   {
     natty::draw({
       .surface = *gas->text_surf,
-      .font = *gas->text_font_title,
+      .font = *gas->text_font,
       .position { 100, 100 },
-      .text = "Testing",
+      .text = "Programando",
+    });
+    natty::draw({
+      .surface = *gas->text_surf,
+      .font = *gas->text_font,
+      .position { 100, 250 },
+      .text = "nas férias",
     });
 
     voo::memiter<unsigned> pixies { gas->text.host_memory() };
@@ -123,9 +128,9 @@ static void on_frame() {
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -1.f },
-      .bb { 1.0f },
-      .scale { 2.0f * gss->sw.aspect(), 2.0f },
+      .aa { -25.f, -3.f },
+      .bb { 0.f, 3.0f },
+      .scale { 10.0f * gss->sw.aspect(), 10.0f },
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_bar.descriptor_set());
@@ -133,9 +138,9 @@ static void on_frame() {
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -1.f },
-      .bb { 1.0f },
-      .scale { 2.0f * gss->sw.aspect(), 2.0f },
+      .aa { -15.f, -5.f },
+      .bb { 5.f, 15.0f },
+      .scale { 10.0f * gss->sw.aspect(), 10.0f },
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
