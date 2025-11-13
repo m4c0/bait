@@ -21,6 +21,7 @@ struct app_stuff {
 
   voo::single_frag_dset dset { 1 };
   voo::single_frag_dset dset_text { 1 };
+  voo::single_frag_dset dset_bar { 1 };
 
   vee::pipeline_layout pl = vee::create_pipeline_layout(
       dset.descriptor_set_layout(),
@@ -47,12 +48,18 @@ struct app_stuff {
   voo::bound_image back;
   voo::h2l_image text {{
     .pd = dq.physical_device(),
-    .w = 2048,
+    .w = 1024,
     .h = 1024,
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
+  voo::h2l_image bar {{
+    .pd = dq.physical_device(),
+    .w = 16,
+    .h = 16,
+    .fmt = VK_FORMAT_R8G8B8A8_SRGB,
+  }}; 
 
-  natty::font_t text_font_title = natty::create_font("Cascadia Mono", 96);
+  natty::font_t text_font_title = natty::create_font("Cascadia Mono", 128);
   natty::font_t text_font = natty::create_font("Times", 72);
   natty::surface_t text_surf = natty::create_surface(text.width(), text.height());
 } * gas;
@@ -83,6 +90,12 @@ static void on_start() {
     }
   }
   vee::update_descriptor_set(gas->dset_text.descriptor_set(), 0, 0, gas->text.iv(), *gas->smp);
+
+  {
+    voo::memiter<unsigned> pixies { gas->bar.host_memory() };
+    for (auto i = 0; i < 256; i++) pixies += 0xFF0000FF;
+  }
+  vee::update_descriptor_set(gas->dset_bar.descriptor_set(), 0, 0, gas->bar.iv(), *gas->smp);
 }
 static void on_frame() {
   if (!gss) gss = new sized_stuff {};
@@ -91,6 +104,7 @@ static void on_frame() {
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
     auto cb = gss->sw.command_buffer();
     gas->text.setup_copy(gss->sw.command_buffer());
+    gas->bar.setup_copy(gss->sw.command_buffer());
 
     upc pc {
       .aa { -1.f },
@@ -111,7 +125,17 @@ static void on_frame() {
     pc = {
       .aa { -1.f },
       .bb { 1.0f },
-      .scale { 2 },
+      .scale { 2.0f * gss->sw.aspect(), 2.0f },
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_bar.descriptor_set());
+    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+    gas->quad.run(cb, 0);
+
+    pc = {
+      .aa { -1.f },
+      .bb { 1.0f },
+      .scale { 2.0f * gss->sw.aspect(), 2.0f },
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
