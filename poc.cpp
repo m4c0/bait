@@ -80,13 +80,13 @@ static void on_start() {
     natty::draw({
       .surface = *surf,
       .font = *font,
-      .position { 100, 100 },
+      .position {},
       .text = "Programando",
     });
     natty::draw({
       .surface = *surf,
       .font = *font,
-      .position { 100, 250 },
+      .position { 0, 200 },
       .text = "nas férias",
     });
 
@@ -94,7 +94,7 @@ static void on_start() {
     natty::draw({
       .surface = *surf,
       .font = *font,
-      .position { 540, 400 },
+      .position { 0, 400 },
       .text = "com m4c0",
     });
 
@@ -153,15 +153,35 @@ static void on_frame() {
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -768, -256 },
-      .bb { 256, 768 },
+      .aa { -768, -156 },
+      .bb { 256, 0 },
       .uva {},
-      .uvb { 1024 },
+      .uvb { 1024, 156 },
       .scale = pc.scale,
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+    gas->quad.run(cb, 0);
+
+    pc = {
+      .aa { -768, -30 },
+      .bb { 256, 126 },
+      .uva { 0, 200 },
+      .uvb { 1024, 356 },
+      .scale = pc.scale,
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    gas->quad.run(cb, 0);
+
+    pc = {
+      .aa { -256, 130 },
+      .bb { -256 + 1024, 180 },
+      .uva { 0, 400 },
+      .uvb { 1024, 450 },
+      .scale = pc.scale,
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     gas->quad.run(cb, 0);
   });
   gss->sw.queue_present(gas->dq.queue());
