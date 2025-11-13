@@ -5,7 +5,9 @@
 
 import casein;
 import dotz;
+import hai;
 import natty;
+import sv;
 import voo;
 import vinyl;
 
@@ -16,6 +18,42 @@ struct upc {
   dotz::vec2 uvb;
   dotz::vec2 scale;
 };
+
+struct call {
+  hai::cstr font {};
+  unsigned size {};
+  hai::cstr text {};
+  dotz::vec2 pos {};
+};
+struct model {
+  hai::varray<call> calls { 128 };
+  hai::cstr image {};
+  unsigned colour {};
+} gmdl = [] {
+  model res {
+    .image { "beach.png"_sv },
+    .colour = 0xFF0000FF,
+  };
+  res.calls.push_back(call {
+    .font { "DIN Condensed"_sv },
+    .size = 128,
+    .text { "Programando"_sv },
+    .pos { -768, -156 },
+  });
+  res.calls.push_back(call {
+    .font { "DIN Condensed"_sv },
+    .size = 128,
+    .text { "nas férias"_sv },
+    .pos { -768, -30 },
+  });
+  res.calls.push_back(call {
+    .font { "Futura"_sv },
+    .size = 48,
+    .text { "com m4c0"_sv },
+    .pos { -256, 130 },
+  });
+  return res;
+}();
 
 struct app_stuff {
   voo::device_and_queue dq { "bait", casein::native_ptr };
@@ -69,34 +107,24 @@ struct sized_stuff {
 static void on_start() {
   gas = new app_stuff {};
 
-  voo::load_image("beach.png", gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
+  voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
     vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
   });
 
   {
     natty::surface_t surf = natty::create_surface(gas->text.width(), gas->text.height());
 
-    natty::font_t font = natty::create_font("DIN Condensed", 128);
-    natty::draw({
-      .surface = *surf,
-      .font = *font,
-      .position {},
-      .text = "Programando",
-    });
-    natty::draw({
-      .surface = *surf,
-      .font = *font,
-      .position { 0, 200 },
-      .text = "nas férias",
-    });
-
-    font = natty::create_font("Futura", 48);
-    natty::draw({
-      .surface = *surf,
-      .font = *font,
-      .position { 0, 400 },
-      .text = "com m4c0",
-    });
+    int position = 0;
+    for (auto & call : gmdl.calls) {
+      natty::font_t font = natty::create_font(call.font.begin(), call.size);
+      natty::draw({
+        .surface = *surf,
+        .font = *font,
+        .position { 0, position },
+        .text = call.text,
+      });
+      position += call.size * 1.25;
+    }
 
     voo::memiter<unsigned> pixies { gas->text.host_memory() };
     auto ptr = natty::surface_data(*surf).begin();
@@ -108,7 +136,7 @@ static void on_start() {
 
   {
     voo::memiter<unsigned> pixies { gas->bar.host_memory() };
-    for (auto i = 0; i < 256; i++) pixies += 0xFF0000FF;
+    for (auto i = 0; i < 256; i++) pixies += gmdl.colour;
   }
   vee::update_descriptor_set(gas->dset_bar.descriptor_set(), 0, 0, gas->bar.iv(), *gas->smp);
 }
@@ -152,37 +180,23 @@ static void on_frame() {
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
 
-    pc = {
-      .aa { -768, -156 },
-      .bb { 256, 0 },
-      .uva {},
-      .uvb { 1024, 156 },
-      .scale = pc.scale,
-    };
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
-    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
-    gas->quad.run(cb, 0);
-
-    pc = {
-      .aa { -768, -30 },
-      .bb { 256, 126 },
-      .uva { 0, 200 },
-      .uvb { 1024, 356 },
-      .scale = pc.scale,
-    };
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    gas->quad.run(cb, 0);
-
-    pc = {
-      .aa { -256, 130 },
-      .bb { -256 + 1024, 180 },
-      .uva { 0, 400 },
-      .uvb { 1024, 450 },
-      .scale = pc.scale,
-    };
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    gas->quad.run(cb, 0);
+    int tpos = 0;
+    for (auto & call : gmdl.calls) {
+      auto pos = call.pos;
+      int size = call.size * 1.25;
+      pc = {
+        .aa = pos,
+        .bb = pos + dotz::vec2 { 1024, size },
+        .uva { 0, tpos },
+        .uvb { 1024, tpos + size },
+        .scale = pc.scale,
+      };
+      vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+      vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
+      vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+      gas->quad.run(cb, 0);
+      tpos += size;
+    }
   });
   gss->sw.queue_present(gas->dq.queue());
 }
