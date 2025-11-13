@@ -12,6 +12,8 @@ import vinyl;
 struct upc {
   dotz::vec2 aa;
   dotz::vec2 bb;
+  dotz::vec2 uva;
+  dotz::vec2 uvb;
   dotz::vec2 scale;
 };
 
@@ -124,6 +126,8 @@ static void on_frame() {
     upc pc {
       .aa = dotz::vec2 { -512.f } * aspect,
       .bb = dotz::vec2 { 512.f } * aspect,
+      .uva = dotz::vec2 {},
+      .uvb = dotz::vec2 { 1024.f },
       .scale = dotz::vec2 { 512.f } * aspect,
     };
 
@@ -151,6 +155,8 @@ static void on_frame() {
     pc = {
       .aa { -768, -256 },
       .bb { 256, 768 },
+      .uva {},
+      .uvb { 1024 },
       .scale = pc.scale,
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
