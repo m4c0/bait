@@ -92,7 +92,7 @@ static void on_start() {
     natty::draw({
       .surface = *surf,
       .font = *font,
-      .position { 540, 420 },
+      .position { 540, 400 },
       .text = "com m4c0",
     });
 
@@ -119,10 +119,12 @@ static void on_frame() {
     gas->text.setup_copy(gss->sw.command_buffer());
     gas->bar.setup_copy(gss->sw.command_buffer());
 
+    dotz::vec2 aspect { gss->sw.aspect(), 1.f };
+
     upc pc {
-      .aa { -1.f },
-      .bb { 1.0f },
-      .scale { 1 },
+      .aa = dotz::vec2 { -512.f } * aspect,
+      .bb = dotz::vec2 { 512.f } * aspect,
+      .scale = dotz::vec2 { 512.f } * aspect,
     };
 
     auto rp = gss->sw.cmd_render_pass({
@@ -130,15 +132,16 @@ static void on_frame() {
     });
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
+
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -25.f, -4.f },
-      .bb { 0.f, 4.0f },
-      .scale { 10.0f * gss->sw.aspect(), 10.0f },
+      .aa { -1280, -200 },
+      .bb { 0, 200 },
+      .scale = pc.scale,
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_bar.descriptor_set());
@@ -146,9 +149,9 @@ static void on_frame() {
     gas->quad.run(cb, 0);
 
     pc = {
-      .aa { -15.f, -5.f },
-      .bb { 5.f, 15.0f },
-      .scale { 10.0f * gss->sw.aspect(), 10.0f },
+      .aa { -768, -256 },
+      .bb { 256, 768 },
+      .scale = pc.scale,
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
