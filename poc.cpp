@@ -60,7 +60,6 @@ struct app_stuff {
   }}; 
 
   natty::font_t text_font = natty::create_font("DIN Condensed", 128);
-  natty::surface_t text_surf = natty::create_surface(text.width(), text.height());
 } * gas;
 
 struct sized_stuff {
@@ -75,21 +74,22 @@ static void on_start() {
   });
 
   {
+    natty::surface_t surf = natty::create_surface(gas->text.width(), gas->text.height());
     natty::draw({
-      .surface = *gas->text_surf,
+      .surface = *surf,
       .font = *gas->text_font,
       .position { 100, 100 },
       .text = "Programando",
     });
     natty::draw({
-      .surface = *gas->text_surf,
+      .surface = *surf,
       .font = *gas->text_font,
       .position { 100, 250 },
       .text = "nas férias",
     });
 
     voo::memiter<unsigned> pixies { gas->text.host_memory() };
-    auto ptr = natty::surface_data(*gas->text_surf).begin();
+    auto ptr = natty::surface_data(*surf).begin();
     for (auto i = 0; i < gas->text.width() * gas->text.height(); i++) {
       pixies += *ptr++;
     }
