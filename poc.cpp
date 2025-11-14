@@ -37,13 +37,13 @@ struct model {
   res.calls.push_back(call {
     .font { "DIN Condensed"_sv },
     .size = 128,
-    .text { "Programando"_sv },
+    .text { "Trabalhando"_sv },
     .pos { -768, -156 },
   });
   res.calls.push_back(call {
     .font { "DIN Condensed"_sv },
     .size = 128,
-    .text { "nas férias"_sv },
+    .text { "nas férias?"_sv },
     .pos { -768, -30 },
   });
   res.calls.push_back(call {
