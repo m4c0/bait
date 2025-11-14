@@ -7,6 +7,7 @@ import casein;
 import dotz;
 import hai;
 import natty;
+import stubby;
 import sv;
 import voo;
 import vinyl;
@@ -181,6 +182,55 @@ static void on_start() {
   vee::update_descriptor_set(gas->dset_text.descriptor_set(), 0, 0, gas->text.iv(), *gas->smp);
 
 }
+
+static void render(vee::command_buffer cb, float a) {
+  dotz::vec2 aspect { a, 1.f };
+
+  upc pc {
+    .aa = dotz::vec2 { -512.f } * aspect,
+    .bb = dotz::vec2 { 512.f } * aspect,
+    .uva = dotz::vec2 {},
+    .uvb = dotz::vec2 { 1024.f },
+    .scale = dotz::vec2 { 512.f } * aspect,
+  };
+
+  vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+
+  vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+  vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
+  gas->quad.run(cb, 0);
+
+  for (auto i = 0; i < gmdl.boxes.size(); i++) {
+    auto & box = gmdl.boxes[i];
+    auto & img = gas->bars[i];
+    pc = {
+      .aa = box.pos,
+      .bb = box.pos + box.size,
+      .scale = pc.scale,
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
+    gas->quad.run(cb, 0);
+  }
+
+  int tpos = 0;
+  for (auto & call : gmdl.calls) {
+    auto pos = call.pos;
+    int size = call.size * 1.25;
+    pc = {
+      .aa = pos,
+      .bb = pos + dotz::vec2 { 1024, size },
+      .uva { 0, tpos },
+      .uvb { 1024, tpos + size },
+      .scale = pc.scale,
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
+    gas->quad.run(cb, 0);
+    tpos += size;
+  }
+}
+
 static void on_frame() {
   if (!gss) gss = new sized_stuff {};
 
@@ -189,56 +239,12 @@ static void on_frame() {
     auto cb = gss->sw.command_buffer();
     gas->text.setup_copy(gss->sw.command_buffer());
 
-    dotz::vec2 aspect { gss->sw.aspect(), 1.f };
-
-    upc pc {
-      .aa = dotz::vec2 { -512.f } * aspect,
-      .bb = dotz::vec2 { 512.f } * aspect,
-      .uva = dotz::vec2 {},
-      .uvb = dotz::vec2 { 1024.f },
-      .scale = dotz::vec2 { 512.f } * aspect,
-    };
-
     auto rp = gss->sw.cmd_render_pass({
       .command_buffer = gss->sw.command_buffer(),
     });
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
-    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
-
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
-    gas->quad.run(cb, 0);
-
-    for (auto i = 0; i < gmdl.boxes.size(); i++) {
-      auto & box = gmdl.boxes[i];
-      auto & img = gas->bars[i];
-      pc = {
-        .aa = box.pos,
-        .bb = box.pos + box.size,
-        .scale = pc.scale,
-      };
-      vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-      vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
-      gas->quad.run(cb, 0);
-    }
-
-    int tpos = 0;
-    for (auto & call : gmdl.calls) {
-      auto pos = call.pos;
-      int size = call.size * 1.25;
-      pc = {
-        .aa = pos,
-        .bb = pos + dotz::vec2 { 1024, size },
-        .uva { 0, tpos },
-        .uvb { 1024, tpos + size },
-        .scale = pc.scale,
-      };
-      vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-      vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
-      gas->quad.run(cb, 0);
-      tpos += size;
-    }
+    render(cb, gss->sw.aspect());
   });
   gss->sw.queue_present(gas->dq.queue());
 }
