@@ -25,15 +25,29 @@ struct call {
   hai::cstr text {};
   dotz::vec2 pos {};
 };
+struct box {
+  dotz::vec2 pos {};
+  dotz::vec2 size {};
+  unsigned colour {};
+};
 struct model {
   hai::varray<call> calls { 128 };
+  hai::varray<box> boxes { 128 };
   hai::cstr image {};
-  unsigned colour {};
 } gmdl = [] {
   model res {
     .image { "beach.png"_sv },
-    .colour = 0xFF0000FF,
   };
+  res.boxes.push_back(box {
+    .pos { -1275, -195 },
+    .size { 1280, 400 },
+    .colour = 0xFF000000,
+  });
+  res.boxes.push_back(box {
+    .pos { -1280, -200 },
+    .size { 1280, 400 },
+    .colour = 0xFF0000FF,
+  });
   res.calls.push_back(call {
     .font { "DIN Condensed"_sv },
     .size = 128,
@@ -56,20 +70,20 @@ struct model {
 }();
 
 class colour_image {
-  voo::h2l_image m_img;
+  voo::h2l_image m_img {};
   voo::single_frag_dset m_dset { 1 };
   voo::single_cb m_cb {};
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
 
 public:
-  explicit colour_image(vee::physical_device pd, unsigned colour) :
-    m_img {{
+  void load(vee::physical_device pd, unsigned colour) {
+    m_img = voo::h2l_image {{
       .pd = pd,
       .w = 16,
       .h = 16,
       .fmt = VK_FORMAT_R8G8B8A8_SRGB,
-    }}
-  {
+    }};
+
     {
       voo::memiter<unsigned> pixies { m_img.host_memory() };
       for (auto i = 0; i < 256; i++) pixies += colour;
@@ -118,14 +132,13 @@ struct app_stuff {
   voo::one_quad quad { dq.physical_device() };
 
   voo::bound_image back;
+  hai::array<colour_image> bars {};
   voo::h2l_image text {{
     .pd = dq.physical_device(),
     .w = 1024,
     .h = 1024,
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
-  colour_image bar { dq.physical_device(), gmdl.colour };
-  colour_image bar_border { dq.physical_device(), 0xFF000000 };
 } * gas;
 
 struct sized_stuff {
@@ -138,6 +151,11 @@ static void on_start() {
   voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
     vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
   });
+
+  gas->bars.set_capacity(gmdl.boxes.size());
+  for (auto i = 0; i < gmdl.boxes.size(); i++) {
+    gas->bars[i].load(gas->dq.physical_device(), gmdl.boxes[i].colour);
+  }
 
   {
     natty::surface_t surf = natty::create_surface(gas->text.width(), gas->text.height());
@@ -186,31 +204,24 @@ static void on_frame() {
     });
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
+    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
 
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
-    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
 
-    pc = {
-      .aa { -1275, -195 },
-      .bb { 5, 205 },
-      .scale = pc.scale,
-    };
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->bar_border.descriptor_set());
-    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
-    gas->quad.run(cb, 0);
-
-    pc = {
-      .aa { -1280, -200 },
-      .bb { 0, 200 },
-      .scale = pc.scale,
-    };
-    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->bar.descriptor_set());
-    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
-    gas->quad.run(cb, 0);
+    for (auto i = 0; i < gmdl.boxes.size(); i++) {
+      auto & box = gmdl.boxes[i];
+      auto & img = gas->bars[i];
+      pc = {
+        .aa = box.pos,
+        .bb = box.pos + box.size,
+        .scale = pc.scale,
+      };
+      vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+      vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
+      gas->quad.run(cb, 0);
+    }
 
     int tpos = 0;
     for (auto & call : gmdl.calls) {
@@ -225,7 +236,6 @@ static void on_frame() {
       };
       vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
       vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
-      vee::cmd_bind_gr_pipeline(cb, *gas->gp);
       gas->quad.run(cb, 0);
       tpos += size;
     }
