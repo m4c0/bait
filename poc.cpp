@@ -247,7 +247,9 @@ static void on_frame() {
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
     auto cb = gss->sw.command_buffer();
-    auto rp = gss->sw.cmd_render_pass({ .command_buffer = cb });
+    auto rp = gss->sw.cmd_render_pass(vee::render_pass_begin {
+      .command_buffer = cb,
+    });
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
@@ -277,40 +279,21 @@ const auto i = [] {
 
     vee::extent ext { 1280, 768 };
     voo::offscreen::buffers ofs { gas->dq.physical_device(), ext, VK_FORMAT_R8G8B8A8_SRGB };
-
-    vee::render_pass rp = vee::create_render_pass({
-      .attachments {{
-        vee::create_colour_attachment(VK_FORMAT_R8G8B8A8_SRGB, vee::image_layout_color_attachment_optimal),
-      }},
-      .subpasses {{
-        vee::create_subpass({
-          .colours {{ vee::create_attachment_ref(0, vee::image_layout_color_attachment_optimal) }},
-        }),
-      }},
-      .dependencies {{
-        vee::create_colour_dependency(),
-      }},
-    });
-    vee::gr_pipeline gp = create_pipeline(*gas->pl, *rp);
-
-    vee::framebuffer fb = vee::create_framebuffer({
-      .render_pass = *rp,
-      .attachments {{ ofs.colour().image_view() }},
-      .extent = ext,
-    });
+    vee::gr_pipeline gp = create_pipeline(*gas->pl, ofs.render_pass());
 
     {
       voo::cmd_buf_one_time_submit ots { cb };
       {
-        voo::cmd_render_pass crp { vee::render_pass_begin {
+        voo::cmd_render_pass crp { ofs.render_pass_begin({
           .command_buffer = cb,
-          .render_pass = *rp,
-          .framebuffer = *fb,
-          .extent = ext,
-        }};
-        vee::cmd_bind_gr_pipeline(cb, *gp);
+          .clear_colours {
+            vee::clear_colour(1, 1, 1, 1),
+            vee::clear_depth(0),
+          },
+        }) };
         vee::cmd_set_viewport(cb, ext);
         vee::cmd_set_scissor(cb, ext);
+        vee::cmd_bind_gr_pipeline(cb, *gp);
         render(cb, 1280.f / 768.f);
       }
       ofs.cmd_copy_to_host(cb);
