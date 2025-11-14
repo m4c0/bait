@@ -125,7 +125,7 @@ struct app_stuff {
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
   colour_image bar { dq.physical_device(), gmdl.colour };
-  colour_image bar_border { dq.physical_device(), 0xFF };
+  colour_image bar_border { dq.physical_device(), 0xFF000000 };
 } * gas;
 
 struct sized_stuff {
@@ -189,6 +189,16 @@ static void on_frame() {
 
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
+    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
+    gas->quad.run(cb, 0);
+
+    pc = {
+      .aa { -1275, -195 },
+      .bb { 5, 205 },
+      .scale = pc.scale,
+    };
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->bar_border.descriptor_set());
     vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     gas->quad.run(cb, 0);
 
