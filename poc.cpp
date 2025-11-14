@@ -103,19 +103,10 @@ public:
   [[nodiscard]] constexpr auto descriptor_set() const { return m_dset.descriptor_set(); }
 };
 
-struct app_stuff {
-  voo::device_and_queue dq { "bait", casein::native_ptr };
-  vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
-
-  voo::single_frag_dset dset { 1 };
-  voo::single_frag_dset dset_text { 1 };
-
-  vee::pipeline_layout pl = vee::create_pipeline_layout(
-      dset.descriptor_set_layout(),
-      vee::vertex_push_constant_range<upc>());
-  vee::gr_pipeline gp = vee::create_graphics_pipeline({
-    .pipeline_layout = *pl,
-    .render_pass = *rp,
+static auto create_pipeline(vee::pipeline_layout::type pl, vee::render_pass::type rp) {
+  return vee::create_graphics_pipeline({
+    .pipeline_layout = pl,
+    .render_pass = rp,
     .shaders {
       voo::shader("poc.vert.spv").pipeline_vert_stage(),
       voo::shader("poc.frag.spv").pipeline_frag_stage(),
@@ -127,6 +118,19 @@ struct app_stuff {
       vee::vertex_attribute_vec2(0, 0),
     },
   });
+}
+
+struct app_stuff {
+  voo::device_and_queue dq { "bait", casein::native_ptr };
+  vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
+
+  voo::single_frag_dset dset { 1 };
+  voo::single_frag_dset dset_text { 1 };
+
+  vee::pipeline_layout pl = vee::create_pipeline_layout(
+      dset.descriptor_set_layout(),
+      vee::vertex_push_constant_range<upc>());
+  vee::gr_pipeline gp = create_pipeline(*pl, *rp);
 
   vee::sampler smp = vee::create_sampler(vee::linear_sampler);
 
@@ -179,6 +183,14 @@ static void on_start() {
       pixies += *ptr++;
     }
   }
+  voo::single_cb scb {};
+  {
+    voo::cmd_buf_one_time_submit ots { scb.cb() };
+    gas->text.setup_copy(scb.cb());
+  }
+  voo::queue::instance()->queue_submit({ .command_buffer = scb.cb() });
+  voo::queue::instance()->device_wait_idle();
+
   vee::update_descriptor_set(gas->dset_text.descriptor_set(), 0, 0, gas->text.iv(), *gas->smp);
 
 }
@@ -193,8 +205,6 @@ static void render(vee::command_buffer cb, float a) {
     .uvb = dotz::vec2 { 1024.f },
     .scale = dotz::vec2 { 512.f } * aspect,
   };
-
-  vee::cmd_bind_gr_pipeline(cb, *gas->gp);
 
   vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
   vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
@@ -237,11 +247,8 @@ static void on_frame() {
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
     auto cb = gss->sw.command_buffer();
-    gas->text.setup_copy(gss->sw.command_buffer());
-
-    auto rp = gss->sw.cmd_render_pass({
-      .command_buffer = gss->sw.command_buffer(),
-    });
+    auto rp = gss->sw.cmd_render_pass({ .command_buffer = cb });
+    vee::cmd_bind_gr_pipeline(cb, *gas->gp);
     vee::cmd_set_viewport(cb, gss->sw.extent());
     vee::cmd_set_scissor(cb, gss->sw.extent());
     render(cb, gss->sw.aspect());
