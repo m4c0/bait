@@ -270,5 +270,58 @@ const auto i = [] {
   on(RESIZE, on_resize);
   on(STOP, on_stop);
 
+  using namespace casein;
+  handle(KEY_DOWN, K_SPACE, [] {
+    voo::single_cb scb {};
+    auto cb = scb.cb();
+
+    vee::extent ext { 1280, 768 };
+    voo::offscreen::buffers ofs { gas->dq.physical_device(), ext, VK_FORMAT_R8G8B8A8_SRGB };
+
+    vee::render_pass rp = vee::create_render_pass({
+      .attachments {{
+        vee::create_colour_attachment(VK_FORMAT_R8G8B8A8_SRGB, vee::image_layout_color_attachment_optimal),
+      }},
+      .subpasses {{
+        vee::create_subpass({
+          .colours {{ vee::create_attachment_ref(0, vee::image_layout_color_attachment_optimal) }},
+        }),
+      }},
+      .dependencies {{
+        vee::create_colour_dependency(),
+      }},
+    });
+    vee::gr_pipeline gp = create_pipeline(*gas->pl, *rp);
+
+    vee::framebuffer fb = vee::create_framebuffer({
+      .render_pass = *rp,
+      .attachments {{ ofs.colour().image_view() }},
+      .extent = ext,
+    });
+
+    {
+      voo::cmd_buf_one_time_submit ots { cb };
+      {
+        voo::cmd_render_pass crp { vee::render_pass_begin {
+          .command_buffer = cb,
+          .render_pass = *rp,
+          .framebuffer = *fb,
+          .extent = ext,
+        }};
+        vee::cmd_bind_gr_pipeline(cb, *gp);
+        vee::cmd_set_viewport(cb, ext);
+        vee::cmd_set_scissor(cb, ext);
+        render(cb, 1280.f / 768.f);
+      }
+      ofs.cmd_copy_to_host(cb);
+    }
+    voo::queue::instance()->queue_submit({ .command_buffer = cb });
+    voo::queue::instance()->device_wait_idle();
+
+    auto mem = ofs.map_host();
+    auto * data = static_cast<stbi::pixel *>(*mem);
+    stbi::write_rgba_unsafe("out/shot.png", ext.width, ext.height, data);
+  });
+
   return 0;
 }();
