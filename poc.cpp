@@ -144,11 +144,11 @@ struct app_stuff {
     .h = 1024,
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
-} * gas;
+} * gas {};
 
 struct sized_stuff {
   voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
-} * gss;
+} * gss {};
 
 static void on_start() {
   gas = new app_stuff {};
@@ -259,6 +259,7 @@ static void on_frame() {
 }
 static void on_resize() {
   if (gss) delete gss;
+  gss = nullptr;
 }
 static void on_stop() {
   if (gss) delete gss;
