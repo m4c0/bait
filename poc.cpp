@@ -274,7 +274,7 @@ const auto i = [] {
     voo::single_cb scb {};
     auto cb = scb.cb();
 
-    vee::extent ext { 1280, 768 };
+    vee::extent ext { 1280, 720 };
     voo::offscreen::buffers ofs { gas->dq.physical_device(), ext, VK_FORMAT_R8G8B8A8_SRGB };
     vee::gr_pipeline gp = create_pipeline(*gas->pl, ofs.render_pass());
 
@@ -291,7 +291,7 @@ const auto i = [] {
         vee::cmd_set_viewport(cb, ext);
         vee::cmd_set_scissor(cb, ext);
         vee::cmd_bind_gr_pipeline(cb, *gp);
-        render(cb, 1280.f / 768.f);
+        render(cb, 1280.f / 720.f);
       }
       ofs.cmd_copy_to_host(cb);
     }
