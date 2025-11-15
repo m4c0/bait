@@ -144,14 +144,16 @@ struct app_stuff {
     .h = 1024,
     .fmt = VK_FORMAT_R8G8B8A8_SRGB,
   }}; 
-} * gas {};
+};
+static hai::uptr<app_stuff> gas {};
 
 struct sized_stuff {
   voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
-} * gss {};
+};
+static hai::uptr<sized_stuff> gss {};
 
 static void on_start() {
-  gas = new app_stuff {};
+  gas.reset(new app_stuff {});
 
   voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
     vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
@@ -242,7 +244,7 @@ static void render(vee::command_buffer cb, float a) {
 }
 
 static void on_frame() {
-  if (!gss) gss = new sized_stuff {};
+  if (!gss) gss.reset(new sized_stuff {});
 
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
@@ -257,14 +259,8 @@ static void on_frame() {
   });
   gss->sw.queue_present(gas->dq.queue());
 }
-static void on_resize() {
-  if (gss) delete gss;
-  gss = nullptr;
-}
-static void on_stop() {
-  if (gss) delete gss;
-  if (gas) delete gas;
-}
+static void on_resize() { gss = {}; }
+static void on_stop() { gss = {}; gas = {}; }
 
 const auto i = [] {
   using namespace vinyl;
