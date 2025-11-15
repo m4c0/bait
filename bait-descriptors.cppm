@@ -1,3 +1,5 @@
+#pragma leco add_resource "cpp.png"
+#pragma leco add_resource "lambda.png"
 export module bait:descriptors;
 import jute;
 import vee;

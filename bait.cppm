@@ -1,6 +1,6 @@
 #pragma leco add_shader "bait.vert"
 #pragma leco add_shader "bait.frag"
-#pragma leco tool
+#pragma leco app
 
 export module bait;
 import :descriptors;
