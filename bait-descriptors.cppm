@@ -25,10 +25,10 @@ class desc_set {
 
 public:
   explicit desc_set(voo::device_and_queue * dq) {
-    voo::load_image(icon_left, dq->physical_device(), dq->queue(), &left, [this] {
+    voo::load_image(icon_left, dq->physical_device(), dq->queue(), &left, [this](auto) {
       vee::update_descriptor_set(dset, 0, *left.iv, *smp);
     }); 
-    voo::load_image(icon_right, dq->physical_device(), dq->queue(), &right, [this] {
+    voo::load_image(icon_right, dq->physical_device(), dq->queue(), &right, [this](auto) {
       vee::update_descriptor_set(dset, 1, *right.iv, *smp);
     }); 
   }

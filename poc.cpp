@@ -155,7 +155,7 @@ static hai::uptr<sized_stuff> gss {};
 static void on_start() {
   gas.reset(new app_stuff {});
 
-  voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [] {
+  voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [](auto) {
     vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
   });
 
