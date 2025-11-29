@@ -42,7 +42,6 @@ public:
   void cmd_begin_render_pass(vee::command_buffer cb) {
     vee::cmd_begin_render_pass(sw.render_pass_begin({
         .clear_colours { vee::clear_colour(0.1, 0.2, 0.3, 1.0) },
-        .use_secondary_cmd_buf = false,
     }));
     vee::cmd_set_scissor(cb, sw.extent());
     vee::cmd_set_viewport(cb, sw.extent());
@@ -53,7 +52,7 @@ public:
     sw.acquire_next_image();
   }
   void submit_and_present(voo::queue * q) {
-    sw.queue_submit(q);
-    sw.queue_present(q);
+    sw.queue_submit();
+    sw.queue_present();
   }
 };

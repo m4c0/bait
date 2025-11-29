@@ -95,7 +95,7 @@ public:
       voo::cmd_buf_one_time_submit ots { m_cb.cb() };
       m_img.setup_copy(m_cb.cb());
     }
-    voo::queue::instance()->queue_submit({
+    voo::queue::universal()->queue_submit({
       .command_buffer = m_cb.cb(),
     });
   }
@@ -155,7 +155,7 @@ static hai::uptr<sized_stuff> gss {};
 static void on_start() {
   gas.reset(new app_stuff {});
 
-  voo::load_image(gmdl.image, gas->dq.physical_device(), gas->dq.queue(), &gas->back, [](auto) {
+  voo::load_image(gmdl.image, gas->dq.physical_device(), &gas->back, [](auto) {
     vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
   });
 
@@ -190,8 +190,8 @@ static void on_start() {
     voo::cmd_buf_one_time_submit ots { scb.cb() };
     gas->text.setup_copy(scb.cb());
   }
-  voo::queue::instance()->queue_submit({ .command_buffer = scb.cb() });
-  voo::queue::instance()->device_wait_idle();
+  voo::queue::universal()->queue_submit({ .command_buffer = scb.cb() });
+  voo::queue::universal()->device_wait_idle();
 
   vee::update_descriptor_set(gas->dset_text.descriptor_set(), 0, 0, gas->text.iv(), *gas->smp);
 
@@ -247,7 +247,7 @@ static void on_frame() {
   if (!gss) gss.reset(new sized_stuff {});
 
   gss->sw.acquire_next_image();
-  gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
+  gss->sw.queue_one_time_submit([] {
     auto cb = gss->sw.command_buffer();
     auto rp = gss->sw.cmd_render_pass(vee::render_pass_begin {
       .command_buffer = cb,
@@ -257,7 +257,7 @@ static void on_frame() {
     vee::cmd_set_scissor(cb, gss->sw.extent());
     render(cb, gss->sw.aspect());
   });
-  gss->sw.queue_present(gas->dq.queue());
+  gss->sw.queue_present();
 }
 static void on_resize() { gss = {}; }
 static void on_stop() { gss = {}; gas = {}; }
@@ -287,7 +287,7 @@ const auto i = [] {
             vee::clear_colour(1, 1, 1, 1),
             vee::clear_depth(0),
           },
-        }) };
+        }), true };
         vee::cmd_set_viewport(cb, ext);
         vee::cmd_set_scissor(cb, ext);
         vee::cmd_bind_gr_pipeline(cb, *gp);
@@ -295,8 +295,8 @@ const auto i = [] {
       }
       ofs.cmd_copy_to_host(cb);
     }
-    voo::queue::instance()->queue_submit({ .command_buffer = cb });
-    voo::queue::instance()->device_wait_idle();
+    voo::queue::universal()->queue_submit({ .command_buffer = cb });
+    voo::queue::universal()->device_wait_idle();
 
     auto mem = ofs.map_host();
     auto * data = static_cast<stbi::pixel *>(*mem);
