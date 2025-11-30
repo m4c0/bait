@@ -155,12 +155,6 @@ static auto create_pipeline(vee::pipeline_layout::type pl, vee::render_pass::typ
       voo::shader("poc.vert.spv").pipeline_vert_stage(),
       voo::shader("poc.frag.spv").pipeline_frag_stage(),
     },
-    .bindings {
-      vee::vertex_input_bind(sizeof(dotz::vec2)),
-    },
-    .attributes {
-      vee::vertex_attribute_vec2(0, 0),
-    },
   });
 }
 
@@ -179,8 +173,6 @@ struct app_stuff {
   vee::gr_pipeline gp = create_pipeline(*pl, *rp);
 
   vee::sampler smp = vee::create_sampler(vee::linear_sampler);
-
-  voo::one_quad quad { dq.physical_device() };
 
   hai::array<colour_image> bars {};
   hai::array<file_image> images {};
@@ -262,7 +254,7 @@ static void render(vee::command_buffer cb, float a) {
     pc.bb = (mdl.pos + mdl.size) * aspect;
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
-    gas->quad.run(cb, 0);
+    vee::cmd_draw(cb, 6, 1);
   }
 
   for (auto i = 0; i < gmdl.boxes.size(); i++) {
@@ -275,7 +267,7 @@ static void render(vee::command_buffer cb, float a) {
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
-    gas->quad.run(cb, 0);
+    vee::cmd_draw(cb, 6, 1);
   }
 
   int tpos = 0;
@@ -291,7 +283,7 @@ static void render(vee::command_buffer cb, float a) {
     };
     vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
     vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset_text.descriptor_set());
-    gas->quad.run(cb, 0);
+    vee::cmd_draw(cb, 6, 1);
     tpos += size;
   }
 }
