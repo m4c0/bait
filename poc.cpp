@@ -31,42 +31,71 @@ struct box {
   dotz::vec2 size {};
   unsigned colour {};
 };
+struct img {
+  dotz::vec2 pos {};
+  dotz::vec2 size {};
+  sv file;
+};
 struct model {
+  hai::varray<img> images { 128 };
   hai::varray<call> calls { 128 };
   hai::varray<box> boxes { 128 };
-  hai::cstr image {};
 } gmdl = [] {
-  model res {
-    .image { "beach.png"_sv },
-  };
-  res.boxes.push_back(box {
-    .pos { -1275, -195 },
-    .size { 1280, 400 },
-    .colour = 0xFF000000,
+  model res {};
+  res.images.push_back(img {
+    .pos { -512 },
+    .size { 1024 },
+    .file = "drake-dislike.jpg"_sv,
+  });
+  res.images.push_back(img {
+    .pos { 100, -400 },
+    .size { 300, 500 },
+    .file = "unity.png"_sv,
+  });
+  res.images.push_back(img {
+    .pos { -500, -400 },
+    .size { 230, 400 },
+    .file = "m4c0.jpg"_sv,
   });
   res.boxes.push_back(box {
-    .pos { -1280, -200 },
-    .size { 1280, 400 },
-    .colour = 0xFF0000FF,
+    .pos { -1024 },
+    .size { 2048 },
+    .colour = 0xC0000000,
   });
   res.calls.push_back(call {
-    .font { "DIN Condensed"_sv },
-    .size = 128,
-    .text { "Trabalhando"_sv },
-    .pos { -768, -156 },
+    .font { "Impact"_sv },
+    .size = 256,
+    .text { "Por quê?"_sv },
+    .pos { -100, 156 },
   });
-  res.calls.push_back(call {
-    .font { "DIN Condensed"_sv },
-    .size = 128,
-    .text { "nas férias?"_sv },
-    .pos { -768, -30 },
-  });
-  res.calls.push_back(call {
-    .font { "Futura"_sv },
-    .size = 48,
-    .text { "com m4c0"_sv },
-    .pos { -256, 130 },
-  });
+  //res.boxes.push_back(box {
+  //  .pos { -1275, -195 },
+  //  .size { 1280, 400 },
+  //  .colour = 0xFF000000,
+  //});
+  //res.boxes.push_back(box {
+  //  .pos { -1280, -200 },
+  //  .size { 1280, 400 },
+  //  .colour = 0xFF0000FF,
+  //});
+  //res.calls.push_back(call {
+  //  .font { "DIN Condensed"_sv },
+  //  .size = 128,
+  //  .text { "Trabalhando"_sv },
+  //  .pos { -768, -156 },
+  //});
+  //res.calls.push_back(call {
+  //  .font { "DIN Condensed"_sv },
+  //  .size = 128,
+  //  .text { "nas férias?"_sv },
+  //  .pos { -768, -30 },
+  //});
+  //res.calls.push_back(call {
+  //  .font { "Futura"_sv },
+  //  .size = 48,
+  //  .text { "com m4c0"_sv },
+  //  .pos { -256, 130 },
+  //});
   return res;
 }();
 
@@ -103,6 +132,21 @@ public:
   [[nodiscard]] constexpr auto descriptor_set() const { return m_dset.descriptor_set(); }
 };
 
+class file_image {
+  voo::bound_image m_img {};
+  voo::single_frag_dset m_dset { 1 };
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+
+public:
+  void load(vee::physical_device pd, sv file) {
+    voo::load_image(file, pd, &m_img, [this](auto) {
+      vee::update_descriptor_set(m_dset.descriptor_set(), 0, 0, *m_img.iv, *m_smp);
+    });
+  }
+
+  [[nodiscard]] constexpr auto descriptor_set() const { return m_dset.descriptor_set(); }
+};
+
 static auto create_pipeline(vee::pipeline_layout::type pl, vee::render_pass::type rp) {
   return vee::create_graphics_pipeline({
     .pipeline_layout = pl,
@@ -124,11 +168,13 @@ struct app_stuff {
   voo::device_and_queue dq { "bait", casein::native_ptr };
   vee::render_pass rp = voo::single_att_render_pass(dq.physical_device(), dq.surface());
 
-  voo::single_frag_dset dset { 1 };
   voo::single_frag_dset dset_text { 1 };
 
+  vee::descriptor_set_layout dsl = vee::create_descriptor_set_layout({
+    vee::dsl_fragment_sampler()
+  });
   vee::pipeline_layout pl = vee::create_pipeline_layout(
-      dset.descriptor_set_layout(),
+      *dsl,
       vee::vertex_push_constant_range<upc>());
   vee::gr_pipeline gp = create_pipeline(*pl, *rp);
 
@@ -136,8 +182,8 @@ struct app_stuff {
 
   voo::one_quad quad { dq.physical_device() };
 
-  voo::bound_image back;
   hai::array<colour_image> bars {};
+  hai::array<file_image> images {};
   voo::h2l_image text {{
     .pd = dq.physical_device(),
     .w = 1024,
@@ -155,9 +201,10 @@ static hai::uptr<sized_stuff> gss {};
 static void on_start() {
   gas.reset(new app_stuff {});
 
-  voo::load_image(gmdl.image, gas->dq.physical_device(), &gas->back, [](auto) {
-    vee::update_descriptor_set(gas->dset.descriptor_set(), 0, 0, *gas->back.iv, *gas->smp);
-  });
+  gas->images.set_capacity(gmdl.images.size());
+  for (auto i = 0; i < gmdl.images.size(); i++) {
+    gas->images[i].load(gas->dq.physical_device(), gmdl.images[i].file);
+  }
 
   gas->bars.set_capacity(gmdl.boxes.size());
   for (auto i = 0; i < gmdl.boxes.size(); i++) {
@@ -208,9 +255,15 @@ static void render(vee::command_buffer cb, float a) {
     .scale = dotz::vec2 { 512.f } * aspect,
   };
 
-  vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
-  vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, gas->dset.descriptor_set());
-  gas->quad.run(cb, 0);
+  for (auto i = 0; i < gmdl.images.size(); i++) {
+    auto & mdl = gmdl.images[i];
+    auto & img = gas->images[i];
+    pc.aa = mdl.pos * aspect;
+    pc.bb = (mdl.pos + mdl.size) * aspect;
+    vee::cmd_push_vertex_constants(cb, *gas->pl, &pc);
+    vee::cmd_bind_descriptor_set(cb, *gas->pl, 0, img.descriptor_set());
+    gas->quad.run(cb, 0);
+  }
 
   for (auto i = 0; i < gmdl.boxes.size(); i++) {
     auto & box = gmdl.boxes[i];
