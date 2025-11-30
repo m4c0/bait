@@ -151,6 +151,7 @@ static auto create_pipeline(vee::pipeline_layout::type pl, vee::render_pass::typ
   return vee::create_graphics_pipeline({
     .pipeline_layout = pl,
     .render_pass = rp,
+    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
     .shaders {
       voo::shader("poc.vert.spv").pipeline_vert_stage(),
       voo::shader("poc.frag.spv").pipeline_frag_stage(),
