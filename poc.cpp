@@ -45,29 +45,29 @@ struct model {
   res.images.push_back(img {
     .pos { -512 },
     .size { 1024 },
-    .file = "drake-dislike.jpg"_sv,
+    .file = "napster.jpg"_sv,
   });
+  // res.images.push_back(img {
+  //   .pos { 100, -400 },
+  //   .size { 300, 500 },
+  //   .file = "unity.png"_sv,
+  // });
   res.images.push_back(img {
-    .pos { 100, -400 },
-    .size { 300, 500 },
-    .file = "unity.png"_sv,
-  });
-  res.images.push_back(img {
-    .pos { -500, -400 },
-    .size { 230, 400 },
+    .pos { -100, -100 },
+    .size { 200, 340 },
     .file = "m4c0.jpg"_sv,
   });
-  res.boxes.push_back(box {
-    .pos { -1024 },
-    .size { 2048 },
-    .colour = 0xC0000000,
-  });
-  res.calls.push_back(call {
-    .font { "Impact"_sv },
-    .size = 256,
-    .text { "Por quê?"_sv },
-    .pos { -100, 156 },
-  });
+  // res.boxes.push_back(box {
+  //   .pos { -1024 },
+  //   .size { 2048 },
+  //   .colour = 0xC0000000,
+  // });
+  //res.calls.push_back(call {
+  //  .font { "Impact"_sv },
+  //  .size = 200,
+  //  .text { "Sonzera!"_sv },
+  //  .pos { -300, 240 },
+  //});
   //res.boxes.push_back(box {
   //  .pos { -1275, -195 },
   //  .size { 1280, 400 },
